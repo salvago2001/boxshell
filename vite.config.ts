@@ -5,6 +5,7 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/boxshell/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -23,8 +24,8 @@ export default defineConfig({
         background_color: '#07090D',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: '/boxshell/',
+        start_url: '/boxshell/',
         icons: [
           {
             src: 'pwa-192x192.png',
