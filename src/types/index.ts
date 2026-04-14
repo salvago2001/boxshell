@@ -30,9 +30,18 @@ export interface Item {
   soldAt: string;       // ISO 8601 (solo si status === 'sold')
 }
 
+export interface SyncConfig {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  userKey: string;      // código de sincronización — identifica los datos del usuario
+  enabled: boolean;
+  lastSyncAt: string;   // ISO timestamp de la última sync exitosa
+}
+
 export interface AppSettings {
   darkMode: boolean;
   appUrl: string;       // URL base para grabar en tags NFC
+  sync?: SyncConfig;
 }
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';

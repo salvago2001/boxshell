@@ -1,22 +1,59 @@
 import { useRef, useState } from 'react';
 import {
-  Download, Upload, FileText, Trash2, Database,
-  Nfc, Info, ChevronRight, Moon, Sun, AlertTriangle,
+  Download, Upload, FileText, Trash2,
+  Nfc, Moon, Sun, AlertTriangle, Cloud, CloudOff, RefreshCw, UploadCloud, DownloadCloud,
 } from 'lucide-react';
 import { useStore, getStorageSize, formatBytes } from '../store/useStore';
 import { exportJSON, importJSON, exportCSV, STORAGE_WARNING_BYTES } from '../utils/export';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/Modal';
 import { Section } from '../components/ui/Card';
+import type { SyncConfig } from '../types';
 
 export function Settings() {
-  const { boxes, items, settings, updateSettings, importData, clearAllData, addToast, getStats } = useStore();
+  const { boxes, items, settings, updateSettings, importData, clearAllData, addToast, getStats, setSyncConfig, pushToCloud, pullFromCloud } = useStore();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearConfirm2, setShowClearConfirm2] = useState(false);
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── Estado sync ────────────────────────────────────────────────────────────
+  const existingSync = settings.sync;
+  const [syncUrl,     setSyncUrl]     = useState(existingSync?.supabaseUrl     ?? '');
+  const [syncKey,     setSyncKey]     = useState(existingSync?.supabaseAnonKey ?? '');
+  const [syncUserKey, setSyncUserKey] = useState(existingSync?.userKey         ?? '');
+  const [syncEnabled, setSyncEnabled] = useState(existingSync?.enabled         ?? false);
+  const [syncing,     setSyncing]     = useState(false);
+
+  const handleSaveSyncConfig = () => {
+    if (!syncUrl || !syncKey || !syncUserKey) {
+      addToast('Rellena todos los campos de sincronización', 'error');
+      return;
+    }
+    const config: SyncConfig = {
+      supabaseUrl:     syncUrl.trim(),
+      supabaseAnonKey: syncKey.trim(),
+      userKey:         syncUserKey.trim(),
+      enabled:         syncEnabled,
+      lastSyncAt:      existingSync?.lastSyncAt ?? '',
+    };
+    setSyncConfig(config);
+    addToast('Configuración de sync guardada', 'success');
+  };
+
+  const handlePush = async () => {
+    setSyncing(true);
+    await pushToCloud();
+    setSyncing(false);
+  };
+
+  const handlePull = async () => {
+    setSyncing(true);
+    await pullFromCloud();
+    setSyncing(false);
+  };
 
   const stats = getStats();
   const storageSize = getStorageSize();
@@ -122,6 +159,112 @@ export function Settings() {
                 />
               }
             />
+          </div>
+        </Section>
+
+        {/* ── Sincronización ───────────────────────────────────────────────── */}
+        <Section title="Sincronización en la nube">
+          <div className="bg-surface-card border border-surface-border rounded-xl overflow-hidden divide-y divide-surface-border">
+
+            {/* Estado actual */}
+            <div className="px-4 py-3 flex items-center gap-3">
+              {syncEnabled && existingSync?.supabaseUrl
+                ? <Cloud size={16} className="text-brand shrink-0" />
+                : <CloudOff size={16} className="text-ink-muted shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ink">
+                  {syncEnabled && existingSync?.supabaseUrl ? 'Sync activo' : 'Sync desactivado'}
+                </p>
+                {existingSync?.lastSyncAt && (
+                  <p className="text-xs text-ink-muted mt-0.5">
+                    Última sync: {new Date(existingSync.lastSyncAt).toLocaleString('es-ES')}
+                  </p>
+                )}
+              </div>
+              <Toggle
+                checked={syncEnabled}
+                onChange={(v) => {
+                  setSyncEnabled(v);
+                  if (existingSync) setSyncConfig({ ...existingSync, enabled: v });
+                }}
+              />
+            </div>
+
+            {/* Campos de configuración */}
+            <div className="px-4 py-4 space-y-3">
+              <p className="text-xs font-mono uppercase tracking-wider text-ink-muted">Credenciales Supabase</p>
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">Project URL</label>
+                <input
+                  type="url"
+                  value={syncUrl}
+                  onChange={(e) => setSyncUrl(e.target.value)}
+                  placeholder="https://xxxx.supabase.co"
+                  className="w-full bg-surface-elevated border border-surface-border rounded-lg px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">Anon / Public Key</label>
+                <input
+                  type="password"
+                  value={syncKey}
+                  onChange={(e) => setSyncKey(e.target.value)}
+                  placeholder="eyJhbGci..."
+                  className="w-full bg-surface-elevated border border-surface-border rounded-lg px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">Código de sync (tu clave personal)</label>
+                <input
+                  type="text"
+                  value={syncUserKey}
+                  onChange={(e) => setSyncUserKey(e.target.value)}
+                  placeholder="mi-clave-secreta-123"
+                  className="w-full bg-surface-elevated border border-surface-border rounded-lg px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
+                />
+                <p className="text-xs text-ink-muted mt-1">
+                  Identificador único para tus datos. Usa el mismo código en todos tus dispositivos.
+                </p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={handleSaveSyncConfig} className="w-full">
+                Guardar configuración
+              </Button>
+            </div>
+
+            {/* Acciones de sync */}
+            {existingSync?.supabaseUrl && (
+              <div className="px-4 py-3 flex gap-2">
+                <button
+                  onClick={handlePull}
+                  disabled={syncing}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-surface-border text-sm text-ink-muted hover:text-brand hover:border-brand/50 transition-all disabled:opacity-50"
+                >
+                  <DownloadCloud size={15} />
+                  Descargar nube
+                </button>
+                <button
+                  onClick={handlePush}
+                  disabled={syncing}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-surface-border text-sm text-ink-muted hover:text-brand hover:border-brand/50 transition-all disabled:opacity-50"
+                >
+                  {syncing
+                    ? <RefreshCw size={15} className="animate-spin" />
+                    : <UploadCloud size={15} />}
+                  Subir local
+                </button>
+              </div>
+            )}
+
+            {/* Instrucciones rápidas */}
+            <div className="px-4 py-3">
+              <p className="text-xs text-ink-muted leading-relaxed">
+                <strong className="text-ink">Setup:</strong> Crea un proyecto gratuito en{' '}
+                <span className="font-mono text-brand">supabase.com</span>, copia la URL y la anon key
+                del panel <em>Project Settings → API</em>, ejecuta el SQL del fichero{' '}
+                <span className="font-mono">supabase-schema.sql</span> en el editor SQL, y pon el mismo
+                código de sync en cada dispositivo.
+              </p>
+            </div>
           </div>
         </Section>
 
@@ -272,7 +415,7 @@ export function Settings() {
 
         {/* Versión */}
         <p className="text-center text-xs font-mono text-ink-faint pb-4">
-          BoxSell v0.1.0 · Almacenamiento local · Sin backend
+          BoxSell v0.2.0 · Local + Supabase sync
         </p>
       </div>
 

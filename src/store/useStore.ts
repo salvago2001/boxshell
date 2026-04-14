@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Box, Item, AppSettings, ToastMessage, ToastType, NFCLookupResult, DashboardStats } from '../types';
+import type { Box, Item, AppSettings, ToastMessage, ToastType, NFCLookupResult, DashboardStats, SyncConfig } from '../types';
+import { pushToSupabase, pullFromSupabase, type SyncResult } from '../lib/sync';
 
 interface StoreState {
   // Datos
@@ -40,6 +41,11 @@ interface StoreState {
   // Importar / Exportar / Limpiar
   importData: (data: { boxes: Box[]; items: Item[] }, replace?: boolean) => void;
   clearAllData: () => void;
+
+  // Sincronización con Supabase
+  setSyncConfig: (config: SyncConfig) => void;
+  pushToCloud: () => Promise<SyncResult>;
+  pullFromCloud: () => Promise<SyncResult>;
 }
 
 export const useStore = create<StoreState>()(
@@ -207,6 +213,57 @@ export const useStore = create<StoreState>()(
 
       clearAllData: () => {
         set({ boxes: [], items: [] });
+      },
+
+      // ─── Sync con Supabase ────────────────────────────────────────────────────
+
+      setSyncConfig: (config) => {
+        set((state) => ({ settings: { ...state.settings, sync: config } }));
+      },
+
+      pushToCloud: async () => {
+        const { boxes, items, settings, addToast } = get();
+        const sync = settings.sync;
+        if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
+          return { ok: false, error: 'Sync no configurado o deshabilitado.' };
+        }
+        const result = await pushToSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, boxes, items);
+        if (result.ok) {
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              sync: { ...state.settings.sync!, lastSyncAt: result.updatedAt },
+            },
+          }));
+          addToast('Datos sincronizados en la nube ✓', 'success');
+        } else {
+          addToast(`Error al subir: ${result.error}`, 'error');
+        }
+        return result;
+      },
+
+      pullFromCloud: async () => {
+        const { settings, addToast } = get();
+        const sync = settings.sync;
+        if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
+          return { ok: false, error: 'Sync no configurado o deshabilitado.' };
+        }
+        const result = await pullFromSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey);
+        if (result.ok) {
+          set((state) => ({
+            boxes: result.payload.boxes,
+            items: result.payload.items,
+            settings: {
+              ...state.settings,
+              sync: { ...state.settings.sync!, lastSyncAt: new Date().toISOString() },
+            },
+          }));
+          addToast('Datos descargados de la nube ✓', 'success');
+          return { ok: true, updatedAt: result.payload.updated_at };
+        } else {
+          addToast(`Error al descargar: ${result.error}`, 'error');
+          return { ok: false, error: result.error };
+        }
       },
     }),
     {

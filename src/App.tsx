@@ -24,6 +24,21 @@ function ThemeProvider() {
   return null
 }
 
+// Auto-pull al arrancar si hay sync configurado
+function SyncOnMount() {
+  const pullFromCloud = useStore((s) => s.pullFromCloud)
+  const syncEnabled  = useStore((s) => s.settings.sync?.enabled)
+
+  useEffect(() => {
+    if (syncEnabled) {
+      pullFromCloud()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return null
+}
+
 // Animación de entrada al cambiar de ruta
 function PageWrapper({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
@@ -99,6 +114,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider />
+      <SyncOnMount />
       <AppRoutes />
     </BrowserRouter>
   )

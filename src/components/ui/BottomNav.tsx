@@ -84,7 +84,7 @@ export function FAB({ onNewBox, onNewItem }: Omit<FABProps, 'onScan'>) {
       )}
 
       {/* Subacciones */}
-      <div className="fixed bottom-20 right-4 z-40 flex flex-col-reverse gap-3 items-end">
+      <div className="fixed bottom-20 right-4 z-40 flex flex-col-reverse gap-3 items-end pb-16">
         {open &&
           actions.map(({ label, icon: Icon, onClick }, i) => (
             <div
