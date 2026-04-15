@@ -51,7 +51,7 @@ export function StatCard({ label, value, sub, icon, accent }: StatCardProps) {
           <span className="text-xs font-mono uppercase tracking-widest text-ink-muted">{label}</span>
           {icon && <span className="text-ink-muted">{icon}</span>}
         </div>
-        <div className="text-2xl font-display font-bold text-ink">{value}</div>
+        <div className="text-2xl font-numbers font-bold text-ink">{value}</div>
         {sub && <div className="text-xs text-ink-muted mt-1">{sub}</div>}
       </div>
     </Card>

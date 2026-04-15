@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoxSell — Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Cabinet+Grotesk:wght@400;500;700;800&family=Oxanium:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy-0:  #020810;
+    --navy-1:  #050F1E;
+    --navy-2:  #081526;
+    --navy-3:  #0C1E35;
+    --navy-4:  #122444;
+    --navy-5:  #1A3058;
+    --cyan:    #00D4FF;
+    --cyan-dim: rgba(0,212,255,0.15);
+    --teal:    #00FFD4;
+    --orange:  #FF6B2B;
+    --orange-dim: rgba(255,107,43,0.15);
+    --white:   #F0F6FF;
+    --muted:   rgba(160,190,230,0.55);
+    --border:  rgba(0,212,255,0.12);
+    --border-s: rgba(0,212,255,0.25);
+    --card-bg: rgba(12,30,55,0.8);
+    --glow-cyan: 0 0 40px rgba(0,212,255,0.18);
+    --glow-orange: 0 0 40px rgba(255,107,43,0.25);
+  }
+
+  body {
+    background: var(--navy-0);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 40px 16px 60px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    gap: 32px;
+    flex-wrap: wrap;
+    overflow-x: hidden;
+  }
+
+  /* ── ambient background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,100,200,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 80% 80%, rgba(0,40,120,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 30% at 60% 20%, rgba(0,212,255,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* ── phone frame ── */
+  .phone {
+    position: relative;
+    width: 375px;
+    height: 812px;
+    border-radius: 48px;
+    background: var(--navy-1);
+    border: 1.5px solid rgba(0,212,255,0.2);
+    box-shadow:
+      0 0 0 8px rgba(0,0,0,0.5),
+      0 0 0 10px rgba(0,212,255,0.04),
+      0 40px 120px rgba(0,0,0,0.8),
+      var(--glow-cyan);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .phone-label {
+    text-align: center;
+    margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--navy-1);
+  }
+
+  /* ── status bar ── */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* ── scrollable content ── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    padding-bottom: 80px;
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* ── header ── */
+  .header {
+    padding: 16px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .header-greeting {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -0.02em;
+  }
+  .header-title span { color: var(--cyan); }
+  .avatar {
+    width: 40px; height: 40px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--orange) 0%, #FF9A5C 100%);
+    box-shadow: var(--glow-orange);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 16px; color: white;
+  }
+
+  /* ── hero card ── */
+  .hero-card {
+    margin: 20px 20px 0;
+    background: linear-gradient(135deg, #0E2A50 0%, #122F60 50%, #0A2040 100%);
+    border: 1px solid var(--border-s);
+    border-radius: 24px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--glow-cyan);
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 20px;
+    width: 120px; height: 60px;
+    background: radial-gradient(ellipse, rgba(255,107,43,0.08) 0%, transparent 70%);
+  }
+  .hero-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 8px;
+    opacity: 0.8;
+  }
+  .hero-amount {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 54px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .hero-amount .currency { font-size: 26px; color: var(--cyan); vertical-align: super; font-weight: 500; }
+  .hero-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .hero-sub b { color: var(--teal); }
+  .hero-chips {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .chip {
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.18);
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .chip-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+  .chip-dot.green { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+  .chip-dot.orange { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+  .chip-dot.blue { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+
+  /* ── stats grid ── */
+  .section-label {
+    padding: 20px 20px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 20px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-s), transparent);
+  }
+  .stat-card.accent {
+    border-color: rgba(255,107,43,0.25);
+    background: rgba(255,107,43,0.05);
+  }
+  .stat-card.accent::before {
+    background: linear-gradient(90deg, transparent, rgba(255,107,43,0.4), transparent);
+  }
+  .stat-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .stat-icon.cyan { background: rgba(0,212,255,0.12); }
+  .stat-icon.orange { background: rgba(255,107,43,0.15); }
+  .stat-icon.teal { background: rgba(0,255,212,0.1); }
+  .stat-icon.purple { background: rgba(130,80,255,0.15); }
+  .stat-value {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+  .stat-trend {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--teal);
+    margin-top: 6px;
+  }
+  .stat-trend.down { color: #FF6B6B; }
+
+  /* ── boxes list ── */
+  .boxes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px 10px;
+  }
+  .boxes-header-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .boxes-header-action {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.05em;
+  }
+  .box-item {
+    margin: 0 20px 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .box-color {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .box-info { flex: 1; min-width: 0; }
+  .box-name {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .box-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .box-value {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+
+  /* ── bottom nav ── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 72px;
+    background: rgba(5,15,30,0.9);
+    backdrop-filter: blur(24px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 20px;
+    z-index: 10;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    opacity: 0.45;
+  }
+  .nav-item.active { opacity: 1; }
+  .nav-icon {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .nav-item.active .nav-icon {
+    background: rgba(0,212,255,0.1);
+    border-radius: 8px;
+    color: var(--cyan);
+  }
+  .nav-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .nav-item.active .nav-label { color: var(--cyan); }
+
+  /* ── FAB ── */
+  .fab {
+    position: absolute;
+    bottom: 84px; right: 20px;
+    width: 52px; height: 52px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--orange) 0%, #FF8C50 100%);
+    box-shadow: 0 8px 32px rgba(255,107,43,0.45), var(--glow-orange);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    color: white;
+    z-index: 20;
+    font-weight: 300;
+    transform: rotate(0deg);
+  }
+
+  /* ── ITEM DETAIL screen ── */
+  .item-photo {
+    height: 220px;
+    background: linear-gradient(180deg, #0C1F3A 0%, var(--navy-2) 100%);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .item-photo-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+  }
+  .item-photo::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(transparent, var(--navy-1));
+  }
+  .photo-back {
+    position: absolute;
+    top: 48px; left: 20px;
+    width: 36px; height: 36px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    z-index: 2;
+  }
+  .item-detail-content {
+    padding: 16px 20px;
+  }
+  .item-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0,255,212,0.1);
+    border: 1px solid rgba(0,255,212,0.25);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--teal);
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .item-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .item-price {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  .item-price span { font-size: 16px; color: var(--muted); font-weight: 400; }
+  .item-desc {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .item-tags {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;
+  }
+  .tag {
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(0,212,255,0.7);
+  }
+  .item-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange) 0%, #FF8C50 100%);
+    border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(255,107,43,0.3);
+  }
+  .btn-secondary {
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 14px;
+    padding: 14px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-align: center;
+  }
+  .item-box-ref {
+    margin-top: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .box-ref-icon {
+    width: 32px; height: 32px;
+    background: rgba(0,212,255,0.1);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .box-ref-info { flex: 1; }
+  .box-ref-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .box-ref-name {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    margin-top: 2px;
+  }
+
+  /* ── SETTINGS screen ── */
+  .settings-header {
+    padding: 60px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .settings-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 4px;
+  }
+  .settings-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -0.02em;
+  }
+  .settings-section {
+    padding: 12px 20px 0;
+  }
+  .settings-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    padding-left: 4px;
+  }
+  .settings-group {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-icon {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .settings-row-icon.cyan { background: rgba(0,212,255,0.12); }
+  .settings-row-icon.orange { background: rgba(255,107,43,0.15); }
+  .settings-row-icon.teal { background: rgba(0,255,212,0.1); }
+  .settings-row-text { flex: 1; }
+  .settings-row-label {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .settings-row-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .toggle-pill {
+    width: 40px; height: 22px;
+    background: rgba(0,212,255,0.7);
+    border-radius: 11px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .toggle-pill::after {
+    content: '';
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 16px; height: 16px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .settings-chevron {
+    font-size: 12px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .btn-settings {
+    width: 100%;
+    background: rgba(0,212,255,0.07);
+    border: 1px solid rgba(0,212,255,0.18);
+    border-radius: 14px;
+    padding: 13px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-align: center;
+    margin-top: 8px;
+  }
+  .btn-danger {
+    width: 100%;
+    background: rgba(255,80,80,0.07);
+    border: 1px solid rgba(255,80,80,0.2);
+    border-radius: 14px;
+    padding: 13px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #FF6B6B;
+    text-align: center;
+    margin-top: 8px;
+  }
+  .storage-bar {
+    margin: 16px 20px 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .storage-bar-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .storage-bar-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .storage-bar-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+  }
+  .bar-track {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    width: 22%;
+    background: linear-gradient(90deg, var(--cyan), var(--teal));
+    border-radius: 2px;
+  }
+
+  /* ── scroll indicator dots ── */
+  .screen-dots {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 12px;
+  }
+  .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--navy-4);
+  }
+  .dot.active {
+    width: 18px;
+    border-radius: 3px;
+    background: var(--cyan);
+  }
+
+  /* ── page title ── */
+  .page-title-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    text-align: center;
+    padding: 20px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .page-title strong { color: var(--cyan); }
+
+  /* ── search bar ── */
+  .search-bar {
+    margin: 14px 20px 0;
+    background: rgba(10,25,50,0.7);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(8px);
+  }
+  .search-icon { font-size: 14px; opacity: 0.4; }
+  .search-placeholder {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── animation ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .phone { animation: fadeUp 0.6s ease both; }
+  .phone:nth-child(2) .screen > * { animation-delay: 0.05s; }
+  .phone:nth-child(3) .screen > * { animation-delay: 0.1s; }
+
+  /* ── responsive ── */
+  @media (max-width: 480px) {
+    body { padding: 20px 12px 40px; flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<div style="width:100%;text-align:center;padding:0 0 32px;z-index:1;position:relative">
+  <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(0,212,255,0.5);margin-bottom:8px">Preview — no modifica la app</div>
+  <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#F0F6FF;letter-spacing:-0.03em">
+    Box<span style="color:#00D4FF">Sell</span> · New Design
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(160,190,230,0.4);margin-top:4px">Dark Blue Fintech — 3 pantallas</div>
+</div>
+
+<!-- ══ SCREEN 1: DASHBOARD ══ -->
+<div style="display:flex;flex-direction:column;align-items:center;z-index:1">
+  <div class="phone-label">Dashboard</div>
+  <div class="phone">
+    <div class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <span>●●●</span>
+        <span>100%</span>
+      </div>
+
+      <div class="content">
+        <div class="header">
+          <div>
+            <div class="header-greeting">Buenas tardes</div>
+            <div class="header-title">Box<span>Sell</span></div>
+          </div>
+          <div class="avatar">S</div>
+        </div>
+
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <span class="search-placeholder">Buscar objetos, cajas, tags...</span>
+        </div>
+
+        <!-- Hero card -->
+        <div class="hero-card">
+          <div class="hero-label">Ingresos totales</div>
+          <div class="hero-amount"><span class="currency">€</span>1.850</div>
+          <div class="hero-sub">+<b>€320</b> pendientes de cobro</div>
+          <div class="hero-chips">
+            <div class="chip"><span class="chip-dot green"></span>12 en stock</div>
+            <div class="chip"><span class="chip-dot orange"></span>3 reservados</div>
+            <div class="chip"><span class="chip-dot blue"></span>8 vendidos</div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="section-label">Resumen</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon cyan">📦</div>
+            <div class="stat-value">4</div>
+            <div class="stat-label">Cajas</div>
+            <div class="stat-trend">↑ 1 nueva</div>
+          </div>
+          <div class="stat-card accent">
+            <div class="stat-icon orange">🏷️</div>
+            <div class="stat-value">23</div>
+            <div class="stat-label">Objetos</div>
+            <div class="stat-trend">8 vendidos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon teal">✅</div>
+            <div class="stat-value">€1.530</div>
+            <div class="stat-label">Vendido</div>
+            <div class="stat-trend">↑ 12.4%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">⏳</div>
+            <div class="stat-value">€320</div>
+            <div class="stat-label">Pendiente</div>
+            <div class="stat-trend down">3 activos</div>
+          </div>
+        </div>
+
+        <!-- Boxes -->
+        <div class="boxes-header">
+          <span class="boxes-header-title">Cajas activas</span>
+          <span class="boxes-header-action">+ Nueva</span>
+        </div>
+
+        <div class="box-item">
+          <div class="box-color" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)">📱</div>
+          <div class="box-info">
+            <div class="box-name">Electrónica</div>
+            <div class="box-meta">7 objetos · Trastero</div>
+          </div>
+          <div class="box-value">€680</div>
+        </div>
+
+        <div class="box-item">
+          <div class="box-color" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25)">👕</div>
+          <div class="box-info">
+            <div class="box-name">Ropa & Moda</div>
+            <div class="box-meta">9 objetos · Armario</div>
+          </div>
+          <div class="box-value">€290</div>
+        </div>
+
+        <div class="box-item">
+          <div class="box-color" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25)">🎮</div>
+          <div class="box-info">
+            <div class="box-name">Videojuegos</div>
+            <div class="box-meta">5 objetos · Salón</div>
+          </div>
+          <div class="box-value">€210</div>
+        </div>
+
+        <div class="box-item">
+          <div class="box-color" style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25)">📚</div>
+          <div class="box-info">
+            <div class="box-name">Libros</div>
+            <div class="box-meta">2 objetos · Estudio</div>
+          </div>
+          <div class="box-value">€55</div>
+        </div>
+      </div>
+
+      <div class="fab">＋</div>
+
+      <div class="bottom-nav">
+        <div class="nav-item active">
+          <div class="nav-icon">⊞</div>
+          <div class="nav-label">Inicio</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⬡</div>
+          <div class="nav-label">Escanear</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚙</div>
+          <div class="nav-label">Ajustes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="screen-dots">
+    <div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: ITEM DETAIL ══ -->
+<div style="display:flex;flex-direction:column;align-items:center;z-index:1">
+  <div class="phone-label">Ficha de objeto</div>
+  <div class="phone" style="animation-delay:0.15s">
+    <div class="screen">
+      <div class="item-photo">
+        <div class="photo-back">←</div>
+        <div class="item-photo-inner">📱</div>
+      </div>
+
+      <div class="content" style="padding-bottom:80px">
+        <div class="item-detail-content">
+          <div class="item-status-badge">
+            <span style="width:5px;height:5px;border-radius:50%;background:#00FFD4;box-shadow:0 0 6px #00FFD4;display:inline-block"></span>
+            EN STOCK
+          </div>
+          <div class="item-title">iPhone 13 Pro 128GB</div>
+          <div class="item-price">€450 <span>precio pedido</span></div>
+          <div class="item-desc">Muy buen estado, sin rayones. Batería al 91%. Incluye cargador original y funda. Comprado en 2022.</div>
+          <div class="item-tags">
+            <div class="tag">electrónica</div>
+            <div class="tag">apple</div>
+            <div class="tag">móvil</div>
+            <div class="tag">wallapop</div>
+          </div>
+          <div class="item-actions">
+            <div class="btn-primary">Marcar vendido</div>
+            <div class="btn-secondary">Editar</div>
+          </div>
+          <div class="item-box-ref">
+            <div class="box-ref-icon">📦</div>
+            <div class="box-ref-info">
+              <div class="box-ref-label">Caja contenedora</div>
+              <div class="box-ref-name">Electrónica · Trastero</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item">
+          <div class="nav-icon">⊞</div>
+          <div class="nav-label">Inicio</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⬡</div>
+          <div class="nav-label">Escanear</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚙</div>
+          <div class="nav-label">Ajustes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="screen-dots">
+    <div class="dot"></div><div class="dot active"></div><div class="dot"></div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: SETTINGS ══ -->
+<div style="display:flex;flex-direction:column;align-items:center;z-index:1">
+  <div class="phone-label">Ajustes</div>
+  <div class="phone" style="animation-delay:0.3s">
+    <div class="screen">
+      <div class="content" style="padding-bottom:80px">
+        <div class="settings-header">
+          <div class="settings-label">Configuración</div>
+          <div class="settings-title">Ajustes</div>
+        </div>
+
+        <div class="storage-bar">
+          <div class="storage-bar-top">
+            <span class="storage-bar-label">Espacio usado</span>
+            <span class="storage-bar-val">0.9 MB / 4 MB</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-top:16px">
+          <div class="settings-section-label">Apariencia</div>
+          <div class="settings-group">
+            <div class="settings-row">
+              <div class="settings-row-icon cyan">🌙</div>
+              <div class="settings-row-text">
+                <div class="settings-row-label">Modo oscuro</div>
+                <div class="settings-row-sub">Interfaz dark para uso nocturno</div>
+              </div>
+              <div class="toggle-pill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-top:14px">
+          <div class="settings-section-label">Sincronización</div>
+          <div class="settings-group">
+            <div class="settings-row">
+              <div class="settings-row-icon cyan">☁️</div>
+              <div class="settings-row-text">
+                <div class="settings-row-label">Sync Supabase</div>
+                <div class="settings-row-sub">Última sync: hace 2 min</div>
+              </div>
+              <div class="toggle-pill"></div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-icon teal">🔑</div>
+              <div class="settings-row-text">
+                <div class="settings-row-label">Configurar credenciales</div>
+                <div class="settings-row-sub">URL y anon key de Supabase</div>
+              </div>
+              <span class="settings-chevron">›</span>
+            </div>
+          </div>
+          <div class="btn-settings">Sincronizar ahora</div>
+        </div>
+
+        <div class="settings-section" style="margin-top:14px">
+          <div class="settings-section-label">Datos</div>
+          <div class="settings-group">
+            <div class="settings-row">
+              <div class="settings-row-icon cyan">⬇️</div>
+              <div class="settings-row-text">
+                <div class="settings-row-label">Exportar JSON</div>
+                <div class="settings-row-sub">Backup completo</div>
+              </div>
+              <span class="settings-chevron">›</span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-icon orange">⬆️</div>
+              <div class="settings-row-text">
+                <div class="settings-row-label">Importar JSON</div>
+                <div class="settings-row-sub">Restaurar backup</div>
+              </div>
+              <span class="settings-chevron">›</span>
+            </div>
+          </div>
+          <div class="btn-danger">Borrar todos los datos</div>
+        </div>
+
+        <div style="padding:20px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:rgba(160,190,230,0.25);letter-spacing:0.1em">
+          BOXSELL v0.2.0 · LOCAL + SUPABASE SYNC
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item">
+          <div class="nav-icon">⊞</div>
+          <div class="nav-label">Inicio</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⬡</div>
+          <div class="nav-label">Escanear</div>
+        </div>
+        <div class="nav-item active">
+          <div class="nav-icon">⚙</div>
+          <div class="nav-label">Ajustes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="screen-dots">
+    <div class="dot"></div><div class="dot"></div><div class="dot active"></div>
+  </div>
+</div>
+
+</body>
+</html>

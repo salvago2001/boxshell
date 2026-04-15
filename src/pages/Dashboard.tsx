@@ -83,7 +83,7 @@ export function Dashboard() {
         <div className="max-w-lg mx-auto py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-display font-bold text-ink">BoxSell</h1>
+              <h1 className="text-2xl font-display font-bold text-ink">Boxshell</h1>
               <p className="text-xs font-mono text-ink-muted">
                 {stats.totalBoxes} cajas · {stats.totalItems} objetos
               </p>
@@ -109,37 +109,44 @@ export function Dashboard() {
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-6">
 
+        {/* Hero card — revenue summary */}
+        {!isSearchActive && (
+          <section>
+            <HeroCard stats={stats} />
+          </section>
+        )}
+
         {/* Stats */}
         {!isSearchActive && (
           <section>
             <div className="grid grid-cols-2 gap-3">
               <StatCard
-                label="Ingresos"
-                value={`${stats.totalRevenue.toFixed(0)}€`}
-                sub={`+${stats.pendingRevenue.toFixed(0)}€ pendientes`}
-                icon={<Euro size={14} />}
-                accent="#10B981"
-              />
-              <StatCard
                 label="Vendidos"
                 value={stats.soldItems}
                 sub={`de ${stats.totalItems} totales`}
                 icon={<TrendingUp size={14} />}
-                accent="#FF6B2B"
+                accent="#EA9003"
               />
               <StatCard
                 label="En stock"
                 value={stats.stockItems}
                 sub={`${stats.reservedItems} reservados`}
                 icon={<Package size={14} />}
-                accent="#3B82F6"
+                accent="#A1EB09"
               />
               <StatCard
                 label="Borradores"
                 value={stats.draftItems}
                 sub={`${stats.totalBoxes} cajas activas`}
                 icon={<ArchiveX size={14} />}
-                accent="#4A5568"
+                accent="#FABC1B"
+              />
+              <StatCard
+                label="Pendiente"
+                value={`${stats.pendingRevenue.toFixed(0)}€`}
+                sub="por cobrar"
+                icon={<Euro size={14} />}
+                accent="#DBEB15"
               />
             </div>
           </section>
@@ -249,6 +256,98 @@ export function Dashboard() {
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 
+import type { DashboardStats } from '../types';
+
+function HeroCard({ stats }: { stats: DashboardStats }) {
+  return (
+    <div
+      className="rounded-2xl p-5 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(140deg, #2D4000 0%, #3A5200 45%, #2A3D00 100%)',
+        boxShadow: '0 14px 44px rgba(30,50,0,0.28), 0 0 0 1.5px rgba(140,190,0,0.28)',
+      }}
+    >
+      {/* Lime glow blob top-right */}
+      <div
+        className="absolute pointer-events-none rounded-full"
+        style={{
+          top: '-50px', right: '-50px',
+          width: '220px', height: '220px',
+          background: 'radial-gradient(circle, rgba(190,230,0,0.2) 0%, transparent 65%)',
+        }}
+      />
+      {/* Bottom lime streak */}
+      <div
+        className="absolute bottom-0 left-0 right-0 pointer-events-none"
+        style={{
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, #DBEB15, #FABC1B, transparent)',
+          opacity: 0.65,
+        }}
+      />
+
+      {/* Label */}
+      <p
+        className="text-xs tracking-widest uppercase mb-2 relative"
+        style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(190,230,20,0.6)' }}
+      >
+        Ingresos totales
+      </p>
+
+      {/* Amount */}
+      <div className="relative flex items-baseline gap-0.5 mb-1">
+        <span
+          style={{
+            fontFamily: "'Oxanium', sans-serif",
+            fontSize: '3rem',
+            fontWeight: 800,
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            color: '#ffffff',
+          }}
+        >
+          <span style={{ fontSize: '1.4rem', color: '#DBEB15', verticalAlign: 'super', fontWeight: 600 }}>€</span>
+          {stats.totalRevenue.toFixed(0)}
+        </span>
+      </div>
+
+      {/* Subtitle */}
+      <p
+        className="text-xs relative mb-4"
+        style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.38)' }}
+      >
+        +<strong style={{ color: '#DBEB15', fontWeight: 600 }}>{stats.pendingRevenue.toFixed(0)}€</strong> pendientes de cobro
+      </p>
+
+      {/* Chips */}
+      <div className="flex flex-wrap gap-2 relative">
+        {[
+          { dot: '#A1EB09', label: `${stats.stockItems} en stock` },
+          { dot: '#EA9003', label: `${stats.reservedItems} reservados` },
+          { dot: '#FABC1B', label: `${stats.soldItems} vendidos` },
+        ].map(({ dot, label }) => (
+          <span
+            key={label}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs"
+            style={{
+              fontFamily: "'DM Mono', monospace",
+              background: 'rgba(190,230,0,0.1)',
+              border: '1px solid rgba(190,230,0,0.2)',
+              color: 'rgba(220,255,100,0.75)',
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: dot, boxShadow: `0 0 5px ${dot}` }}
+            />
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BoxCard({
   box,
   onClick,
@@ -280,10 +379,10 @@ function BoxCard({
         <div className="flex items-center gap-3 mt-0.5">
           <span className="text-xs text-ink-muted font-mono">{box.itemCount} objetos</span>
           {box.stockCount > 0 && (
-            <span className="text-xs text-blue-400 font-mono">{box.stockCount} en stock</span>
+            <span className="text-xs font-mono text-lime-700 dark:text-blue-400">{box.stockCount} en stock</span>
           )}
           {box.soldCount > 0 && (
-            <span className="text-xs text-emerald-400 font-mono">{box.soldCount} vendidos</span>
+            <span className="text-xs font-mono text-orange-700 dark:text-emerald-400">{box.soldCount} vendidos</span>
           )}
         </div>
       </div>

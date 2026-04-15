@@ -54,7 +54,7 @@ export const useStore = create<StoreState>()(
       boxes: [],
       items: [],
       settings: {
-        darkMode: true,
+        darkMode: false,
         appUrl: typeof window !== 'undefined' ? window.location.origin : 'https://boxsell.app',
       },
       toasts: [],

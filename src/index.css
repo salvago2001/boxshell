@@ -2,21 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Variables CSS de tema ──────────────────────────────────────────────────── */
+/* ── Light mode (default) ─────────────────────────────────────────────────── */
 :root {
-  --color-surface: #07090D;
-  --color-card: #0F1420;
-  --color-elevated: #141B2D;
-  --color-border: #1E2A42;
-  --color-brand: #FF6B2B;
-  --color-ink: #E8EDF5;
-  --color-ink-muted: #5A6A8A;
-  --color-ink-faint: #2A3348;
+  /* Surface palette — RGB channels for Tailwind opacity modifiers */
+  --surface:          236 234 224;   /* #ECEAE0 — warm stone page */
+  --surface-card:     255 255 255;   /* #FFFFFF — pure white cards */
+  --surface-elevated: 248 247 242;   /* #F8F7F2 — slightly elevated */
+  --surface-border:   210 204 172;   /* #D2CCAC — warm tan border */
+
+  /* Brand — orange */
+  --brand:       234 144 3;    /* #EA9003 */
+  --brand-light: 245 165 31;   /* #F5A51F */
+  --brand-dark:  200 120 0;    /* #C87800 */
+  --brand-muted: 253 243 220;  /* #FDF3DC */
+
+  /* Text */
+  --ink:       24 22 10;    /* #18160A */
+  --ink-muted: 110 101 64;  /* #6E6540 */
+  --ink-faint: 200 194 160; /* #C8C2A0 */
+
+  /* Legacy hex vars (used by focus-visible, QR, etc.) */
+  --color-surface:    rgb(var(--surface));
+  --color-card:       rgb(var(--surface-card));
+  --color-elevated:   rgb(var(--surface-elevated));
+  --color-border:     rgb(var(--surface-border));
+  --color-brand:      rgb(var(--brand));
+  --color-ink:        rgb(var(--ink));
+  --color-ink-muted:  rgb(var(--ink-muted));
+  --color-ink-faint:  rgb(var(--ink-faint));
+
+  color-scheme: light;
+}
+
+/* ── Dark mode override ────────────────────────────────────────────────────── */
+.dark {
+  --surface:          7 9 13;     /* #07090D */
+  --surface-card:     15 20 32;   /* #0F1420 */
+  --surface-elevated: 20 27 45;   /* #141B2D */
+  --surface-border:   30 42 66;   /* #1E2A42 */
+
+  --brand:       255 107 43;  /* #FF6B2B */
+  --brand-light: 255 140 90;  /* #FF8C5A */
+  --brand-dark:  224 85 32;   /* #E05520 */
+  --brand-muted: 42 24 16;    /* #2A1810 */
+
+  --ink:       232 237 245;  /* #E8EDF5 */
+  --ink-muted: 90 106 138;   /* #5A6A8A */
+  --ink-faint: 42 51 72;     /* #2A3348 */
 
   color-scheme: dark;
 }
 
-/* ── Reset y base ────────────────────────────────────────────────────────────── */
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -30,49 +67,37 @@ html {
 body {
   background-color: var(--color-surface);
   color: var(--color-ink);
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   overscroll-behavior: none;
 }
 
-/* Safe area para móviles con notch */
+/* Safe area for notch */
 .pt-safe {
   padding-top: env(safe-area-inset-top);
 }
 
-/* ── Scrollbar personalizada ─────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 2px;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-ink-muted);
-}
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-muted); }
 
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
-/* ── Inputs y selects ────────────────────────────────────────────────────────── */
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
 input[type="search"]::-webkit-search-cancel-button {
-  filter: invert(0.5);
+  filter: invert(0.3);
 }
 
 select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6A8A' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E6540' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   appearance: none;
@@ -80,17 +105,24 @@ select {
   padding-right: 36px !important;
 }
 
+.dark select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6A8A' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 input[type="date"] {
+  color-scheme: light;
+}
+.dark input[type="date"] {
   color-scheme: dark;
 }
 
-/* ── Patrones de fondo decorativos ──────────────────────────────────────────── */
+/* ── Background patterns ─────────────────────────────────────────────────── */
 .bg-dot-pattern {
-  background-image: radial-gradient(circle, #1E2A42 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgb(var(--surface-border)) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
-/* ── Clamp de texto ──────────────────────────────────────────────────────────── */
+/* ── Text clamp ──────────────────────────────────────────────────────────── */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -98,46 +130,23 @@ input[type="date"] {
   overflow: hidden;
 }
 
-/* ── Animaciones de página ──────────────────────────────────────────────────── */
+/* ── Page transition ─────────────────────────────────────────────────────── */
 @keyframes pageEnter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 .page-enter {
   animation: pageEnter 0.25s ease-out;
 }
 
-/* ── QR reader override ──────────────────────────────────────────────────────── */
-#qr-reader {
-  border: none !important;
-  width: 100% !important;
-}
+/* ── QR reader overrides ─────────────────────────────────────────────────── */
+#qr-reader               { border: none !important; width: 100% !important; }
+#qr-reader video         { border-radius: 0 !important; object-fit: cover !important; }
+#qr-reader__scan_region  { background: transparent !important; }
+#qr-reader img           { display: none !important; }
+#qr-reader__dashboard    { display: none !important; }
 
-#qr-reader video {
-  border-radius: 0 !important;
-  object-fit: cover !important;
-}
-
-#qr-reader__scan_region {
-  background: transparent !important;
-}
-
-#qr-reader img {
-  display: none !important;
-}
-
-#qr-reader__dashboard {
-  display: none !important;
-}
-
-/* ── Focus visible ──────────────────────────────────────────────────────────── */
+/* ── Focus visible ───────────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
