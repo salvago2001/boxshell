@@ -261,7 +261,10 @@ export const useStore = create<StoreState>()(
         if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
           return { ok: false, error: 'Sync no configurado o deshabilitado.' };
         }
-        const result = await pushToSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, boxes, items);
+        // Fotos excluidas del sync: son base64 pesadas e incompatibles con el límite JSONB de Supabase.
+        // Cada dispositivo conserva sus propias fotos en IDB local.
+        const itemsWithoutPhotos = items.map((i) => ({ ...i, photos: [] as string[] }));
+        const result = await pushToSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, boxes, itemsWithoutPhotos);
         if (result.ok) {
           set((state) => ({
             settings: {
@@ -284,17 +287,16 @@ export const useStore = create<StoreState>()(
         }
         const result = await pullFromSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey);
         if (result.ok) {
-          // Guardar fotos de los items descargados en IDB
-          const photosMap: Record<string, string[]> = {};
-          for (const item of result.payload.items) {
-            if (item.photos?.length > 0) photosMap[item.id] = item.photos;
-          }
-          if (Object.keys(photosMap).length > 0) {
-            saveAllPhotos(photosMap).catch(console.error);
-          }
+          // Los items vienen sin fotos desde la nube (excluidas del push).
+          // Fusionar con las fotos que ya hay en IDB local para no perderlas.
+          const localPhotosMap = await loadAllPhotos();
+          const mergedItems = result.payload.items.map((item) => ({
+            ...item,
+            photos: localPhotosMap[item.id] ?? [],
+          }));
           set((state) => ({
             boxes: result.payload.boxes,
-            items: result.payload.items,
+            items: mergedItems,
             settings: {
               ...state.settings,
               sync: { ...state.settings.sync!, lastSyncAt: new Date().toISOString() },
