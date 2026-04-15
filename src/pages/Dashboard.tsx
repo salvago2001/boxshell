@@ -33,7 +33,12 @@ export function Dashboard() {
   // Filtrar items según búsqueda y tab activo
   const filteredItems = useMemo(() => {
     let result = items;
-    if (filterTab !== 'all') result = result.filter((i) => i.status === filterTab);
+    // El filtro de tab solo se aplica cuando no hay búsqueda activa.
+    // Al buscar se muestran todos los estados para no ocultar resultados
+    // cuando el tab activo no coincide con el estado del item encontrado.
+    if (!searchQuery.trim() && filterTab !== 'all') {
+      result = result.filter((i) => i.status === filterTab);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const boxMap = new Map(boxes.map((b) => [b.id, b]));
@@ -41,8 +46,8 @@ export function Dashboard() {
         const box = boxMap.get(i.boxId);
         return (
           i.name.toLowerCase().includes(q) ||
-          i.description.toLowerCase().includes(q) ||
-          i.tags.some((t) => t.toLowerCase().includes(q)) ||
+          (i.description ?? '').toLowerCase().includes(q) ||
+          (i.tags ?? []).some((t) => t.toLowerCase().includes(q)) ||
           box?.name.toLowerCase().includes(q)
         );
       });
