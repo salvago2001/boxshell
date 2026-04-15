@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Box, Item, AppSettings, ToastMessage, ToastType, NFCLookupResult, DashboardStats, SyncConfig } from '../types';
 import { pushToSupabase, pullFromSupabase, type SyncResult } from '../lib/sync';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase-config';
 
 interface StoreState {
   // Datos
@@ -56,6 +57,13 @@ export const useStore = create<StoreState>()(
       settings: {
         darkMode: false,
         appUrl: typeof window !== 'undefined' ? window.location.origin : 'https://boxsell.app',
+        sync: {
+          supabaseUrl:     SUPABASE_URL,
+          supabaseAnonKey: SUPABASE_ANON_KEY,
+          userKey:         '',
+          enabled:         false,
+          lastSyncAt:      '',
+        },
       },
       toasts: [],
 

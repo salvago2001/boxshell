@@ -258,11 +258,10 @@ export function Settings() {
             {/* Instrucciones rápidas */}
             <div className="px-4 py-3">
               <p className="text-xs text-ink-muted leading-relaxed">
-                <strong className="text-ink">Setup:</strong> Crea un proyecto gratuito en{' '}
-                <span className="font-mono text-brand">supabase.com</span>, copia la URL y la anon key
-                del panel <em>Project Settings → API</em>, ejecuta el SQL del fichero{' '}
-                <span className="font-mono">supabase-schema.sql</span> en el editor SQL, y pon el mismo
-                código de sync en cada dispositivo.
+                <strong className="text-ink">Setup:</strong> La URL y la clave ya están configuradas.
+                Solo tienes que elegir un <strong className="text-ink">código de sync</strong> personal
+                (cualquier texto, p.ej. tu nombre) y usarlo en todos tus dispositivos.
+                Activa el toggle y pulsa <em>Guardar configuración</em>.
               </p>
             </div>
           </div>
