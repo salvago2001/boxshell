@@ -45,7 +45,7 @@ interface StoreState {
   // Sincronización con Supabase
   setSyncConfig: (config: SyncConfig) => void;
   pushToCloud: () => Promise<SyncResult>;
-  pullFromCloud: () => Promise<SyncResult>;
+  pullFromCloud: (silent?: boolean) => Promise<SyncResult>;
 }
 
 export const useStore = create<StoreState>()(
@@ -242,7 +242,7 @@ export const useStore = create<StoreState>()(
         return result;
       },
 
-      pullFromCloud: async () => {
+      pullFromCloud: async (silent = false) => {
         const { settings, addToast } = get();
         const sync = settings.sync;
         if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
@@ -258,10 +258,18 @@ export const useStore = create<StoreState>()(
               sync: { ...state.settings.sync!, lastSyncAt: new Date().toISOString() },
             },
           }));
-          addToast('Datos descargados de la nube ✓', 'success');
+          if (!silent) addToast('Datos descargados de la nube ✓', 'success');
           return { ok: true, updatedAt: result.payload.updated_at };
         } else {
-          addToast(`Error al descargar: ${result.error}`, 'error');
+          // "Sin datos aún" no es un error — simplemente la nube está vacía
+          const isEmptyCloud = result.error.includes('No hay datos');
+          if (!silent) {
+            if (isEmptyCloud) {
+              addToast('La nube está vacía. Sube tus datos desde el móvil primero.', 'info');
+            } else {
+              addToast(`Error al descargar: ${result.error}`, 'error');
+            }
+          }
           return { ok: false, error: result.error };
         }
       },

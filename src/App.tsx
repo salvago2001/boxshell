@@ -31,7 +31,7 @@ function SyncOnMount() {
 
   useEffect(() => {
     if (syncEnabled) {
-      pullFromCloud()
+      pullFromCloud(true) // silencioso — sin toast de error si la nube está vacía
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
