@@ -268,20 +268,17 @@ async function checkProtection(page: Page): Promise<void> {
     return;
   }
 
-  // CAPTCHA clásico (reCAPTCHA / hCaptcha)
+  // CAPTCHA clásico (reCAPTCHA / hCaptcha) — solo iframes visibles, sin class/id genéricos
   const captchaSelectors = [
-    'iframe[src*="captcha"]',
     'iframe[src*="recaptcha"]',
     'iframe[src*="hcaptcha"]',
-    '[class*="captcha"]',
-    '[id*="captcha"]',
     'iframe[title*="reCAPTCHA"]',
     'iframe[title*="hCaptcha"]',
   ];
 
   for (const sel of captchaSelectors) {
     const el = await page.$(sel);
-    if (el) {
+    if (el && await el.isVisible().catch(() => false)) {
       warn('¡CAPTCHA detectado!');
       warn('Resuélvelo manualmente en Chrome y pulsa ENTER para continuar...');
       await waitForEnter('');

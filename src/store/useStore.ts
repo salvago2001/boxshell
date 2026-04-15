@@ -3,6 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Box, Item, AppSettings, ToastMessage, ToastType, NFCLookupResult, DashboardStats, SyncConfig } from '../types';
 import { pushToSupabase, pullFromSupabase, type SyncResult } from '../lib/sync';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase-config';
+import {
+  idbStorage, getIDBStorageSize,
+  saveItemPhotos, saveAllPhotos, loadAllPhotos, deleteItemPhotos, clearAllItemPhotos,
+} from '../lib/idb-storage';
+
+// Referencia al set de Zustand para usarla en onRehydrateStorage (se asigna en la factory)
+let _storeSet: ((partial: Partial<StoreState>) => void) | null = null;
 
 interface StoreState {
   // Datos
@@ -51,7 +58,9 @@ interface StoreState {
 
 export const useStore = create<StoreState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+    _storeSet = (partial) => set(partial as StoreState);
+    return {
       boxes: [],
       items: [],
       settings: {
@@ -106,11 +115,17 @@ export const useStore = create<StoreState>()(
           createdAt: now,
           updatedAt: now,
         };
+        if (newItem.photos.length > 0) {
+          saveItemPhotos(newItem.id, newItem.photos).catch(console.error);
+        }
         set((state) => ({ items: [...state.items, newItem] }));
         return newItem;
       },
 
       updateItem: (id, updates) => {
+        if (updates.photos !== undefined) {
+          saveItemPhotos(id, updates.photos).catch(console.error);
+        }
         set((state) => ({
           items: state.items.map((i) =>
             i.id === id
@@ -121,6 +136,7 @@ export const useStore = create<StoreState>()(
       },
 
       deleteItem: (id) => {
+        deleteItemPhotos(id).catch(console.error);
         set((state) => ({ items: state.items.filter((i) => i.id !== id) }));
       },
 
@@ -213,6 +229,14 @@ export const useStore = create<StoreState>()(
       // ─── Import / Export / Clear ──────────────────────────────────────────────
 
       importData: (data, replace = false) => {
+        // Guardar fotos en IDB en background (fire-and-forget, no bloquea la UI)
+        const photosMap: Record<string, string[]> = {};
+        for (const item of data.items) {
+          if (item.photos?.length > 0) photosMap[item.id] = item.photos;
+        }
+        if (Object.keys(photosMap).length > 0) {
+          saveAllPhotos(photosMap).catch(console.error);
+        }
         set((state) => ({
           boxes: replace ? data.boxes : [...state.boxes, ...data.boxes],
           items: replace ? data.items : [...state.items, ...data.items],
@@ -220,6 +244,7 @@ export const useStore = create<StoreState>()(
       },
 
       clearAllData: () => {
+        clearAllItemPhotos().catch(console.error);
         set({ boxes: [], items: [] });
       },
 
@@ -230,6 +255,7 @@ export const useStore = create<StoreState>()(
       },
 
       pushToCloud: async () => {
+
         const { boxes, items, settings, addToast } = get();
         const sync = settings.sync;
         if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
@@ -258,6 +284,14 @@ export const useStore = create<StoreState>()(
         }
         const result = await pullFromSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey);
         if (result.ok) {
+          // Guardar fotos de los items descargados en IDB
+          const photosMap: Record<string, string[]> = {};
+          for (const item of result.payload.items) {
+            if (item.photos?.length > 0) photosMap[item.id] = item.photos;
+          }
+          if (Object.keys(photosMap).length > 0) {
+            saveAllPhotos(photosMap).catch(console.error);
+          }
           set((state) => ({
             boxes: result.payload.boxes,
             items: result.payload.items,
@@ -281,30 +315,56 @@ export const useStore = create<StoreState>()(
           return { ok: false, error: result.error };
         }
       },
-    }),
+    };
+  },
     {
       name: 'boxsell-storage',
-      storage: createJSONStorage(() => localStorage),
-      // No persistir los toasts (son efímeros)
+      storage: createJSONStorage(() => idbStorage),
+      // Fotos excluidas del estado serializado → se guardan en IDB photos store aparte
       partialize: (state) => ({
         boxes: state.boxes,
-        items: state.items,
+        items: state.items.map((i) => ({ ...i, photos: [] as string[] })),
         settings: state.settings,
       }),
+      // Al hidratar: restaurar fotos desde IDB photos store al estado en memoria
+      onRehydrateStorage: () => async (state) => {
+        if (!state || !_storeSet) return;
+
+        const photosMap = await loadAllPhotos();
+
+        // Caso migración desde localStorage: items tienen fotos embebidas pero IDB photos store está vacío
+        const hasEmbeddedPhotos = state.items.some((i) => (i.photos?.length ?? 0) > 0);
+        if (hasEmbeddedPhotos && Object.keys(photosMap).length === 0) {
+          const migrationMap: Record<string, string[]> = {};
+          for (const item of state.items) {
+            if (item.photos?.length > 0) migrationMap[item.id] = item.photos;
+          }
+          await saveAllPhotos(migrationMap).catch(console.error);
+          // Forzar re-persist sin fotos en keyval (partialize las eliminará)
+          _storeSet({ items: [...state.items] });
+          console.info('[BoxSell] Fotos migradas a IDB photos store ✓');
+          return;
+        }
+
+        // Caso normal: inyectar fotos desde IDB photos store al estado en memoria
+        if (Object.keys(photosMap).length > 0) {
+          _storeSet({
+            items: state.items.map((item) => ({
+              ...item,
+              photos: photosMap[item.id] ?? [],
+            })),
+          });
+        }
+      },
     }
   )
 );
 
 // ─── Helpers externos ──────────────────────────────────────────────────────────
 
-/** Calcula el tamaño aproximado del localStorage en bytes */
-export function getStorageSize(): number {
-  try {
-    const data = localStorage.getItem('boxsell-storage');
-    return data ? new Blob([data]).size : 0;
-  } catch {
-    return 0;
-  }
+/** Calcula el tamaño aproximado del almacenamiento en bytes (async, IndexedDB) */
+export async function getStorageSize(): Promise<number> {
+  return getIDBStorageSize();
 }
 
 /** Formatea bytes a KB/MB legible */

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Download, Upload, FileText, Trash2,
   Nfc, Moon, Sun, AlertTriangle, Cloud, CloudOff, RefreshCw, UploadCloud, DownloadCloud,
@@ -56,7 +56,10 @@ export function Settings() {
   };
 
   const stats = getStats();
-  const storageSize = getStorageSize();
+  const [storageSize, setStorageSize] = useState(0);
+  useEffect(() => {
+    getStorageSize().then(setStorageSize);
+  }, [items, boxes]);
   const storagePercent = Math.min(100, (storageSize / STORAGE_WARNING_BYTES) * 100);
   const storageWarning = storageSize > STORAGE_WARNING_BYTES;
 

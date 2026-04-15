@@ -174,5 +174,5 @@ export function compressImage(file: File): Promise<string> {
   });
 }
 
-/** Umbral de advertencia: 4 MB */
-export const STORAGE_WARNING_BYTES = 4 * 1024 * 1024;
+/** Umbral de advertencia: 200 MB (IndexedDB no tiene el límite de 5 MB de localStorage) */
+export const STORAGE_WARNING_BYTES = 200 * 1024 * 1024;
