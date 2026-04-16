@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Box, Item, AppSettings, ToastMessage, ToastType, NFCLookupResult, DashboardStats, SyncConfig } from '../types';
-import { pushToSupabase, pullFromSupabase, type SyncResult } from '../lib/sync';
+import { pushToSupabase, pullFromSupabase, pushPhotosToStorage, pullPhotosFromStorage, type SyncResult } from '../lib/sync';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase-config';
 import {
   idbStorage, getIDBStorageSize,
@@ -255,27 +255,40 @@ export const useStore = create<StoreState>()(
       },
 
       pushToCloud: async () => {
-
         const { boxes, items, settings, addToast } = get();
         const sync = settings.sync;
         if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
           return { ok: false, error: 'Sync no configurado o deshabilitado.' };
         }
-        // Fotos excluidas del sync: son base64 pesadas e incompatibles con el límite JSONB de Supabase.
-        // Cada dispositivo conserva sus propias fotos en IDB local.
+
+        // 1. Subir items/cajas sin fotos (JSONB)
         const itemsWithoutPhotos = items.map((i) => ({ ...i, photos: [] as string[] }));
         const result = await pushToSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, boxes, itemsWithoutPhotos);
-        if (result.ok) {
-          set((state) => ({
-            settings: {
-              ...state.settings,
-              sync: { ...state.settings.sync!, lastSyncAt: result.updatedAt },
-            },
-          }));
-          addToast('Datos sincronizados en la nube ✓', 'success');
-        } else {
+        if (!result.ok) {
           addToast(`Error al subir: ${result.error}`, 'error');
+          return result;
         }
+
+        // 2. Subir fotos a Supabase Storage
+        const photosMap = await loadAllPhotos();
+        const totalItems = Object.keys(photosMap).length;
+        if (totalItems > 0) {
+          addToast('Subiendo fotos a la nube...', 'info');
+          await pushPhotosToStorage(
+            sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, photosMap,
+            (done, total) => {
+              if (done === total) addToast(`${total} fotos subidas ✓`, 'success');
+            },
+          );
+        }
+
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            sync: { ...state.settings.sync!, lastSyncAt: result.updatedAt },
+          },
+        }));
+        addToast('Datos sincronizados en la nube ✓', 'success');
         return result;
       },
 
@@ -287,9 +300,24 @@ export const useStore = create<StoreState>()(
         }
         const result = await pullFromSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey);
         if (result.ok) {
-          // Los items vienen sin fotos desde la nube (excluidas del push).
-          // Fusionar con las fotos que ya hay en IDB local para no perderlas.
+          // Los items vienen sin fotos desde la nube (se guardan en Storage aparte).
           const localPhotosMap = await loadAllPhotos();
+          const itemIds = result.payload.items.map((i) => i.id);
+
+          // Descargar fotos que faltan localmente desde Supabase Storage
+          const itemsWithoutPhotos = itemIds.filter(id => !localPhotosMap[id]?.length);
+          if (itemsWithoutPhotos.length > 0) {
+            if (!silent) addToast('Descargando fotos...', 'info');
+            const downloadedPhotos = await pullPhotosFromStorage(
+              sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey,
+              itemIds, localPhotosMap,
+            );
+            if (Object.keys(downloadedPhotos).length > 0) {
+              await saveAllPhotos(downloadedPhotos);
+              Object.assign(localPhotosMap, downloadedPhotos);
+            }
+          }
+
           const mergedItems = result.payload.items.map((item) => ({
             ...item,
             photos: localPhotosMap[item.id] ?? [],
