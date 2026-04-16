@@ -67,7 +67,7 @@ export function Modal({
         className={[
           'relative w-full bg-surface-card border border-surface-border',
           'rounded-t-2xl sm:rounded-2xl shadow-xl',
-          'animate-slide-up max-h-[92vh] flex flex-col',
+          'animate-slide-up max-h-[92vh] flex flex-col overflow-x-hidden',
           size === 'full' ? sizeClasses.full : `${sizeClasses[size]} sm:mx-auto`,
         ].join(' ')}
       >
@@ -97,7 +97,7 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1">{children}</div>
+        <div className="overflow-y-auto overflow-x-hidden flex-1 min-w-0">{children}</div>
       </div>
     </div>
   );

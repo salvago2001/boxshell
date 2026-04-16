@@ -503,12 +503,29 @@ async function scrapeDetail(page: Page, url: string): Promise<{
     '[class*="publish"]',
   ];
 
+  // Selectores de categoría ordenados de más a menos específico.
+  // NOTA: evitamos [class*="tag"] porque es demasiado genérico y captura
+  //       elementos de UI de Wallapop que no son la categoría del artículo.
   const tagSelectors = [
-    '[data-testid*="tag"]',
-    '[class*="tag"]',
-    '[class*="category"]',
+    // Breadcrumb de categoría — el más fiable (muestra "Electrónica > Móviles"…)
+    '[data-testid="item-detail-category-breadcrumb"] a',
+    '[data-testid*="breadcrumb"] a',
+    '[data-testid*="category"] a',
+    // Hashtags del anuncio (aparecen bajo la descripción)
+    '[data-testid*="hashtag"]',
+    '[data-testid*="tag"]:not([data-testid*="price"]):not([data-testid*="status"])',
+    // Fallbacks estructurales — solo breadcrumb, no cualquier elemento con "tag"
     '[class*="breadcrumb"] a',
+    '[class*="Breadcrumb"] a',
+    '[class*="category-path"] a',
+    '[class*="categoryPath"] a',
   ];
+
+  // Texto que indican navegación genérica de Wallapop (no categorías del artículo)
+  const SKIP_TAGS = new Set([
+    'inicio', 'home', 'wallapop', 'mi perfil', 'vender', 'subir', 'chat',
+    'favoritos', 'notificaciones', 'buscar', 'ajustes', 'ayuda', '...', '›', '/',
+  ]);
 
   // Descripción
   let description = '';
@@ -548,15 +565,23 @@ async function scrapeDetail(page: Page, url: string): Promise<{
   }
 
   // Tags / Categoría
+  // Probamos selectores en orden; al primer grupo que devuelva resultados, paramos.
   const tags: string[] = [];
   for (const sel of tagSelectors) {
     const els = await page.$$(sel);
     if (els.length > 0) {
+      const candidates: string[] = [];
       for (const el of els) {
         const text = (await el.textContent() || '').trim();
-        if (text && text.length < 60) tags.push(text);
+        const lower = text.toLowerCase();
+        if (text && text.length > 1 && text.length < 60 && !SKIP_TAGS.has(lower)) {
+          if (!candidates.includes(text)) candidates.push(text);
+        }
       }
-      if (tags.length > 0) break;
+      if (candidates.length > 0) {
+        tags.push(...candidates);
+        break;
+      }
     }
   }
 
