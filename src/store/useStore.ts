@@ -263,6 +263,13 @@ export const useStore = create<StoreState>()(
 
         // 1. Subir fotos base64 a Storage y obtener URLs públicas
         const photosMap = await loadAllPhotos();
+        // Fallback: incluir fotos que están en memoria pero aún no en IDB
+        // (race condition cuando importData → saveAllPhotos no ha terminado)
+        for (const item of items) {
+          if (item.photos?.length > 0 && !photosMap[item.id]?.length) {
+            photosMap[item.id] = item.photos;
+          }
+        }
         let itemsWithPhotos = items;
 
         const hasBase64 = Object.values(photosMap).some(p => p.some(f => f && !isStorageUrl(f)));
