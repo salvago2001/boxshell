@@ -7,6 +7,7 @@ import { useStore } from '../store/useStore';
 import { Button } from '../components/ui/Button';
 import { BoxForm } from '../components/forms/BoxForm';
 import { ItemForm } from '../components/forms/ItemForm';
+import { AppHeader } from '../components/ui/AppHeader';
 import type { Box, Item } from '../types';
 
 type ScanMode = 'nfc' | 'qr';
@@ -103,15 +104,7 @@ export function ScanView() {
 
   return (
     <div className="min-h-screen bg-surface flex flex-col pb-20">
-      {/* Header */}
-      <header className="border-b border-surface-border px-4 py-4">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-xl font-display font-bold text-ink">Escanear</h1>
-          <p className="text-xs font-mono text-ink-muted mt-0.5">
-            {nfcSupported ? 'NFC disponible' : 'Solo QR disponible en este dispositivo'}
-          </p>
-        </div>
-      </header>
+      <AppHeader showBack title="Escanear" />
 
       <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6 gap-6">
 

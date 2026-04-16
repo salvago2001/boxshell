@@ -3,6 +3,7 @@ import {
   Download, Upload, FileText, Trash2,
   Nfc, Moon, Sun, AlertTriangle, Cloud, CloudOff, RefreshCw, UploadCloud, DownloadCloud,
 } from 'lucide-react';
+import { AppHeader } from '../components/ui/AppHeader';
 import { useStore, getStorageSize, formatBytes } from '../store/useStore';
 import { exportJSON, importJSON, exportCSV, STORAGE_WARNING_BYTES } from '../utils/export';
 import { Button } from '../components/ui/Button';
@@ -103,13 +104,7 @@ export function Settings() {
 
   return (
     <div className="min-h-screen bg-surface pb-24">
-      {/* Header */}
-      <header className="border-b border-surface-border px-4 py-5">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-xl font-display font-bold text-ink">Configuración</h1>
-          <p className="text-xs font-mono text-ink-muted mt-0.5">Exportar, importar y ajustes</p>
-        </div>
-      </header>
+      <AppHeader showBack title="Configuración" />
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-8">
 

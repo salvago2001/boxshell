@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, Package, MapPin, Nfc, Plus } from 'lucide-react';
+import { Edit2, Trash2, Package, MapPin, Nfc, Plus } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/Modal';
 import { BoxForm } from '../components/forms/BoxForm';
 import { ItemForm } from '../components/forms/ItemForm';
+import { AppHeader } from '../components/ui/AppHeader';
 import type { Box, Item } from '../types';
 import { useNavigate as useNav } from 'react-router-dom';
 
@@ -63,24 +64,10 @@ export function BoxView() {
 
   return (
     <div className="min-h-screen bg-surface pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-surface-border">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="h-9 w-9 flex items-center justify-center rounded-xl text-ink-muted hover:text-ink hover:bg-surface-card transition-all"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                className="h-3 w-3 rounded-full shrink-0"
-                style={{ backgroundColor: box.color }}
-              />
-              <h1 className="text-base font-display font-bold text-ink truncate">{box.name}</h1>
-            </div>
-          </div>
+      <AppHeader
+        showBack
+        title={box.name}
+        actions={
           <div className="flex gap-1">
             <button
               onClick={() => setShowEditForm(true)}
@@ -99,8 +86,8 @@ export function BoxView() {
               </button>
             )}
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-6">
         {/* Info de la caja */}

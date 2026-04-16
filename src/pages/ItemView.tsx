@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Edit2, Trash2, ExternalLink, Box as BoxIcon,
+  Edit2, Trash2, ExternalLink, Box as BoxIcon,
   Nfc, ChevronLeft, ChevronRight, Package, MoveRight,
 } from 'lucide-react';
+import { AppHeader } from '../components/ui/AppHeader';
 import { useStore } from '../store/useStore';
 import { StatusBadge, TagBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -75,16 +76,10 @@ export function ItemView() {
 
   return (
     <div className="min-h-screen bg-surface pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-surface-border">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="h-9 w-9 flex items-center justify-center rounded-xl text-ink-muted hover:text-ink hover:bg-surface-card transition-all"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="flex-1 text-base font-display font-bold text-ink truncate">{item.name}</h1>
+      <AppHeader
+        showBack
+        title={item.name}
+        actions={
           <div className="flex gap-1">
             <button
               onClick={() => setShowEditForm(true)}
@@ -101,8 +96,8 @@ export function ItemView() {
               <Trash2 size={16} />
             </button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <div className="max-w-lg mx-auto">
         {/* Galería de fotos */}
