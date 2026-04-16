@@ -34,9 +34,10 @@ export async function pushToSupabase(
   try {
     const client = getSupabaseClient(supabaseUrl, anonKey);
     const now = new Date().toISOString();
+    const normalizedKey = userKey.trim().toLowerCase();
     const { error } = await client
       .from('sync_data')
-      .upsert({ user_key: userKey, boxes, items, updated_at: now });
+      .upsert({ user_key: normalizedKey, boxes, items, updated_at: now });
     if (error) return { ok: false, error: error.message };
     return { ok: true, updatedAt: now };
   } catch (e) {
@@ -52,10 +53,11 @@ export async function pullFromSupabase(
 ): Promise<{ ok: true; payload: RemotePayload } | { ok: false; error: string }> {
   try {
     const client = getSupabaseClient(supabaseUrl, anonKey);
+    const normalizedKey = userKey.trim().toLowerCase();
     const { data, error } = await client
       .from('sync_data')
       .select('user_key, boxes, items, updated_at')
-      .eq('user_key', userKey)
+      .eq('user_key', normalizedKey)
       .maybeSingle();  // no lanza error si no hay fila aún
 
     if (error) return { ok: false, error: error.message };
