@@ -147,7 +147,7 @@ export function ItemForm({
         </Field>
 
         {/* Precio */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 min-w-0">
           <Field label="Precio pedido (€)" error={errors.price}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">€</span>
