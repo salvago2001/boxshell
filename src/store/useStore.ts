@@ -8,8 +8,9 @@ import {
   saveItemPhotos, saveAllPhotos, loadAllPhotos, deleteItemPhotos, clearAllItemPhotos,
 } from '../lib/idb-storage';
 
-// Referencia al set de Zustand para usarla en onRehydrateStorage (se asigna en la factory)
+// Referencias al set/get de Zustand para usarlas en onRehydrateStorage (se asignan en la factory)
 let _storeSet: ((partial: Partial<StoreState>) => void) | null = null;
+let _storeGet: (() => StoreState) | null = null;
 
 interface StoreState {
   // Datos
@@ -60,6 +61,7 @@ export const useStore = create<StoreState>()(
   persist(
     (set, get) => {
     _storeSet = (partial) => set(partial as StoreState);
+    _storeGet = get;
     return {
       boxes: [],
       items: [],
@@ -392,12 +394,18 @@ export const useStore = create<StoreState>()(
           return;
         }
 
-        // Caso normal: inyectar fotos desde IDB photos store al estado en memoria
+        // Caso normal: inyectar fotos desde IDB photos store al estado en memoria.
+        // Usamos el estado ACTUAL del store (no el capturado en la hidratación) para evitar
+        // la race condition con pullFromCloud: si pull ya corrió y puso URLs en los items,
+        // _storeGet nos da esos items actualizados; si no, _storeGet devuelve los hidratados.
         if (Object.keys(photosMap).length > 0) {
+          const currentItems = _storeGet?.().items ?? state.items;
           _storeSet({
-            items: state.items.map((item) => ({
+            items: currentItems.map((item) => ({
               ...item,
-              photos: photosMap[item.id] ?? [],
+              // photosMap[item.id] → fotos de IDB; si no hay entrada, conservar las que ya
+              // tiene el item en memoria (puede ser una URL de Storage puesta por pullFromCloud)
+              photos: photosMap[item.id] ?? item.photos,
             })),
           });
         }

@@ -497,7 +497,12 @@ function EmptyState({
 
 function DraggableItemRow({ item, boxName, onClick }: { item: Item; boxName?: string; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: item.id });
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+  // touch-action: none es necesario para que el TouchSensor de @dnd-kit funcione en iOS/Android:
+  // sin él, Safari intercepta los eventos táctiles para el scroll de página y el drag nunca arranca.
+  const style: React.CSSProperties = {
+    touchAction: 'none',
+    ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
+  };
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}
       className={isDragging ? 'opacity-50 z-50 relative' : ''}>

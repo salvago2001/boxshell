@@ -521,10 +521,21 @@ async function scrapeDetail(page: Page, url: string): Promise<{
     '[class*="categoryPath"] a',
   ];
 
-  // Texto que indican navegación genérica de Wallapop (no categorías del artículo)
+  // Texto que indica navegación genérica de Wallapop (no categorías del artículo).
+  // Añadidos términos de UI comunes en español e inglés para evitar falsos positivos.
   const SKIP_TAGS = new Set([
+    // Navegación principal
     'inicio', 'home', 'wallapop', 'mi perfil', 'vender', 'subir', 'chat',
-    'favoritos', 'notificaciones', 'buscar', 'ajustes', 'ayuda', '...', '›', '/',
+    'favoritos', 'notificaciones', 'buscar', 'ajustes', 'ayuda',
+    // Acciones de UI
+    'comprar', 'anunciar', 'seguir', 'compartir', 'denunciar', 'guardar',
+    'ver más', 'ver menos', 'mostrar más', 'mostrar menos', 'cargar más',
+    'editar', 'eliminar', 'cancelar', 'aceptar', 'cerrar',
+    // Separadores y caracteres de relleno
+    '...', '›', '/', '>', '<', '·', '|', '-', '–', '—', '»', '«',
+    // Inglés
+    'sell', 'buy', 'profile', 'settings', 'search', 'help', 'sign in',
+    'log in', 'sign up', 'register', 'more', 'less', 'edit', 'delete',
   ]);
 
   // Descripción
@@ -574,12 +585,17 @@ async function scrapeDetail(page: Page, url: string): Promise<{
       for (const el of els) {
         const text = (await el.textContent() || '').trim();
         const lower = text.toLowerCase();
-        if (text && text.length > 1 && text.length < 60 && !SKIP_TAGS.has(lower)) {
-          if (!candidates.includes(text)) candidates.push(text);
-        }
+        // Saltar: vacíos, demasiado cortos/largos, términos de navegación,
+        // cadenas numéricas (precios, fechas) y separadores
+        if (!text || text.length < 2 || text.length > 60) continue;
+        if (SKIP_TAGS.has(lower)) continue;
+        if (/^[\d\s€$.,+\-/*%]+$/.test(text)) continue;   // solo números/símbolos
+        if (/^[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\w]/.test(text)) continue; // empieza con símbolo
+        if (!candidates.includes(text)) candidates.push(text);
       }
       if (candidates.length > 0) {
-        tags.push(...candidates);
+        // Limitar a las primeras 4 categorías del breadcrumb para no importar rutas completas
+        tags.push(...candidates.slice(0, 4));
         break;
       }
     }

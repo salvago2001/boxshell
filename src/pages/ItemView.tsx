@@ -220,39 +220,54 @@ export function ItemView() {
           </div>
 
           {/* Caja contenedora */}
-          {box && (
-            <div>
-              <label className="text-xs font-mono uppercase tracking-widest text-ink-muted block mb-2">
-                Caja
-              </label>
-              <Link
-                to={`/box/${box.id}`}
-                className="flex items-center gap-3 p-3 bg-surface-card border border-surface-border rounded-xl hover:border-brand/30 transition-all group"
-              >
-                <div
-                  className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${box.color}20`, border: `1px solid ${box.color}40` }}
+          <div>
+            <label className="text-xs font-mono uppercase tracking-widest text-ink-muted block mb-2">
+              Caja
+            </label>
+            {box ? (
+              <>
+                <Link
+                  to={`/box/${box.id}`}
+                  className="flex items-center gap-3 p-3 bg-surface-card border border-surface-border rounded-xl hover:border-brand/30 transition-all group"
                 >
-                  <BoxIcon size={16} style={{ color: box.color }} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-ink">{box.name}</p>
-                  {box.location && (
-                    <p className="text-xs text-ink-muted">{box.location}</p>
-                  )}
-                </div>
-                <ChevronRight size={16} className="text-ink-muted group-hover:text-ink transition-colors" />
-              </Link>
-
+                  <div
+                    className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${box.color}20`, border: `1px solid ${box.color}40` }}
+                  >
+                    <BoxIcon size={16} style={{ color: box.color }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">{box.name}</p>
+                    {box.location && (
+                      <p className="text-xs text-ink-muted">{box.location}</p>
+                    )}
+                  </div>
+                  <ChevronRight size={16} className="text-ink-muted group-hover:text-ink transition-colors" />
+                </Link>
+                <button
+                  onClick={() => setShowMoveModal(true)}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-mono text-ink-muted hover:text-brand transition-colors"
+                >
+                  <MoveRight size={12} />
+                  Mover a otra caja
+                </button>
+              </>
+            ) : (
               <button
                 onClick={() => setShowMoveModal(true)}
-                className="mt-2 flex items-center gap-1.5 text-xs font-mono text-ink-muted hover:text-brand transition-colors"
+                className="w-full flex items-center gap-3 p-3 bg-surface-card border border-dashed border-surface-border rounded-xl hover:border-brand/50 hover:text-brand transition-all text-ink-muted"
               >
-                <MoveRight size={12} />
-                Mover a otra caja
+                <div className="h-9 w-9 rounded-lg bg-surface-elevated border border-surface-border flex items-center justify-center shrink-0">
+                  <BoxIcon size={16} className="text-ink-faint" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium">Sin caja asignada</p>
+                  <p className="text-xs text-ink-muted">Toca para asignar a una caja</p>
+                </div>
+                <ChevronRight size={16} />
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Wallapop */}
           {item.wallapopUrl && (
@@ -312,8 +327,13 @@ export function ItemView() {
         </div>
       </div>
 
-      {/* Modal para mover de caja */}
-      <Modal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} title="Mover a otra caja" size="sm">
+      {/* Modal para mover/asignar caja */}
+      <Modal
+        isOpen={showMoveModal}
+        onClose={() => setShowMoveModal(false)}
+        title={box ? 'Mover a otra caja' : 'Asignar a una caja'}
+        size="sm"
+      >
         <div className="p-4 space-y-2">
           {boxes
             .filter((b) => b.id !== item.boxId)
@@ -329,7 +349,7 @@ export function ItemView() {
               </button>
             ))}
           {boxes.filter((b) => b.id !== item.boxId).length === 0 && (
-            <p className="text-sm text-ink-muted text-center py-4">No hay otras cajas disponibles</p>
+            <p className="text-sm text-ink-muted text-center py-4">No hay cajas disponibles</p>
           )}
         </div>
       </Modal>

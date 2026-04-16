@@ -108,7 +108,7 @@ export function ItemForm({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
-      <form onSubmit={handleSubmit} className="p-6 space-y-5 min-w-0">
+      <form onSubmit={handleSubmit} className="p-6 space-y-5 min-w-0 w-full overflow-x-hidden">
 
         {/* Nombre */}
         <Field label="Nombre *" error={errors.name}>
@@ -147,7 +147,7 @@ export function ItemForm({
         </Field>
 
         {/* Precio */}
-        <div className="grid grid-cols-2 gap-3 min-w-0">
+        <div className="grid grid-cols-2 gap-3 overflow-hidden">
           <Field label="Precio pedido (€)" error={errors.price}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">€</span>
@@ -177,7 +177,7 @@ export function ItemForm({
 
         {/* Precio vendido (solo si sold) */}
         {form.status === 'sold' && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 overflow-hidden">
             <Field label="Precio de venta real (€)">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">€</span>
