@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Box, Item, AppSettings, ToastMessage, ToastType, NFCLookupResult, DashboardStats, SyncConfig } from '../types';
-import { pushToSupabase, pullFromSupabase, pushPhotosToStorage, pullPhotosFromStorage, type SyncResult } from '../lib/sync';
+import { pushToSupabase, pullFromSupabase, pushPhotosToStorage, isStorageUrl, type SyncResult } from '../lib/sync';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase-config';
 import {
   idbStorage, getIDBStorageSize,
@@ -261,25 +261,42 @@ export const useStore = create<StoreState>()(
           return { ok: false, error: 'Sync no configurado o deshabilitado.' };
         }
 
-        // 1. Subir items/cajas sin fotos (JSONB)
-        const itemsWithoutPhotos = items.map((i) => ({ ...i, photos: [] as string[] }));
-        const result = await pushToSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, boxes, itemsWithoutPhotos);
+        // 1. Subir fotos base64 a Storage y obtener URLs públicas
+        const photosMap = await loadAllPhotos();
+        let itemsWithPhotos = items;
+
+        const hasBase64 = Object.values(photosMap).some(p => p.some(f => f && !isStorageUrl(f)));
+        if (hasBase64) {
+          addToast('Subiendo fotos a la nube...', 'info');
+          const photoResult = await pushPhotosToStorage(
+            sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, photosMap,
+            (done, total) => { if (done === total) addToast(`${total} fotos subidas ✓`, 'success'); },
+          );
+          if (photoResult.ok) {
+            // Guardar URLs en IDB y en memoria (reemplaza base64)
+            await saveAllPhotos(photoResult.urlMap);
+            itemsWithPhotos = items.map(i => ({
+              ...i,
+              photos: photoResult.urlMap[i.id] ?? i.photos,
+            }));
+            set({ items: itemsWithPhotos });
+          }
+        } else if (Object.keys(photosMap).length > 0) {
+          // Fotos ya son URLs → inyectarlas en items para el push
+          itemsWithPhotos = items.map(i => ({
+            ...i,
+            photos: photosMap[i.id] ?? [],
+          }));
+        }
+
+        // 2. Subir items (con URLs de Storage en photos) + cajas a Supabase
+        const result = await pushToSupabase(
+          sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey,
+          boxes, itemsWithPhotos,
+        );
         if (!result.ok) {
           addToast(`Error al subir: ${result.error}`, 'error');
           return result;
-        }
-
-        // 2. Subir fotos a Supabase Storage
-        const photosMap = await loadAllPhotos();
-        const totalItems = Object.keys(photosMap).length;
-        if (totalItems > 0) {
-          addToast('Subiendo fotos a la nube...', 'info');
-          await pushPhotosToStorage(
-            sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, photosMap,
-            (done, total) => {
-              if (done === total) addToast(`${total} fotos subidas ✓`, 'success');
-            },
-          );
         }
 
         set((state) => ({
@@ -300,27 +317,19 @@ export const useStore = create<StoreState>()(
         }
         const result = await pullFromSupabase(sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey);
         if (result.ok) {
-          // Los items vienen sin fotos desde la nube (se guardan en Storage aparte).
-          const localPhotosMap = await loadAllPhotos();
-          const itemIds = result.payload.items.map((i) => i.id);
-
-          // Descargar fotos que faltan localmente desde Supabase Storage
-          const itemsWithoutPhotos = itemIds.filter(id => !localPhotosMap[id]?.length);
-          if (itemsWithoutPhotos.length > 0) {
-            if (!silent) addToast('Descargando fotos...', 'info');
-            const downloadedPhotos = await pullPhotosFromStorage(
-              sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey,
-              itemIds, localPhotosMap,
-            );
-            if (Object.keys(downloadedPhotos).length > 0) {
-              await saveAllPhotos(downloadedPhotos);
-              Object.assign(localPhotosMap, downloadedPhotos);
-            }
+          // Los items traen las URLs de Storage directamente en photos.
+          // Guardar en IDB para que estén disponibles tras reiniciar la app.
+          const urlsToSave: Record<string, string[]> = {};
+          for (const item of result.payload.items) {
+            if (item.photos?.length) urlsToSave[item.id] = item.photos;
+          }
+          if (Object.keys(urlsToSave).length > 0) {
+            await saveAllPhotos(urlsToSave);
           }
 
           const mergedItems = result.payload.items.map((item) => ({
             ...item,
-            photos: localPhotosMap[item.id] ?? [],
+            photos: item.photos ?? [],
           }));
           set((state) => ({
             boxes: result.payload.boxes,
