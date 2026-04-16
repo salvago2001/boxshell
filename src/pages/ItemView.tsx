@@ -270,7 +270,7 @@ export function ItemView() {
               <div className="h-9 w-9 rounded-lg bg-[#13C2A6]/10 border border-[#13C2A6]/20 flex items-center justify-center shrink-0">
                 <ExternalLink size={15} className="text-[#13C2A6]" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-ink">Ver en Wallapop</p>
                 <p className="text-xs text-ink-muted truncate">{item.wallapopUrl}</p>
               </div>
