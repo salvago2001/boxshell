@@ -29,12 +29,7 @@ export function ScanView() {
   const { isSupported: nfcSupported, isReading, startReading, stopReading, error: nfcError } = useNFC();
   const { isScanning, startScanning, stopScanning, error: qrError } = useQR();
 
-  // Si NFC no está disponible, ir directamente a QR
-  useEffect(() => {
-    if (!nfcSupported) {
-      setMode('qr');
-    }
-  }, [nfcSupported]);
+  // (No forzar QR cuando NFC no está disponible: mostramos instrucciones en la pestaña NFC)
 
   const handleScanResult = useCallback(
     (uid: string) => {
@@ -108,36 +103,38 @@ export function ScanView() {
 
       <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6 gap-6">
 
-        {/* Selector de modo */}
-        {nfcSupported && (
-          <div className="flex gap-2 p-1 bg-surface-card border border-surface-border rounded-xl">
-            {(['nfc', 'qr'] as ScanMode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={[
-                  'flex-1 flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-all duration-150',
-                  mode === m
-                    ? 'bg-brand text-white'
-                    : 'text-ink-muted hover:text-ink',
-                ].join(' ')}
-              >
-                {m === 'nfc' ? <Nfc size={15} /> : <Camera size={15} />}
-                {m === 'nfc' ? 'NFC' : 'QR / Cámara'}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Selector de modo — siempre visible */}
+        <div className="flex gap-2 p-1 bg-surface-card border border-surface-border rounded-xl">
+          {(['nfc', 'qr'] as ScanMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={[
+                'flex-1 flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-all duration-150',
+                mode === m
+                  ? 'bg-brand text-white'
+                  : 'text-ink-muted hover:text-ink',
+              ].join(' ')}
+            >
+              {m === 'nfc' ? <Nfc size={15} /> : <Camera size={15} />}
+              {m === 'nfc' ? 'NFC' : 'QR / Cámara'}
+            </button>
+          ))}
+        </div>
 
         {/* Área de escaneo */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           {mode === 'nfc' ? (
-            <NFCScanArea
-              isReading={isReading}
-              onStart={startNFC}
-              onStop={stopAll}
-              error={error}
-            />
+            nfcSupported ? (
+              <NFCScanArea
+                isReading={isReading}
+                onStart={startNFC}
+                onStop={stopAll}
+                error={error}
+              />
+            ) : (
+              <NFCInstructionsArea />
+            )
           ) : (
             <QRScanArea
               isScanning={isScanning}
@@ -210,13 +207,14 @@ export function ScanView() {
         </div>
 
         {/* Descripción de uso */}
-        {!isActive && !result && (
+        {!isActive && !result && mode === 'qr' && (
           <div className="text-center space-y-1">
-            <p className="text-xs text-ink-muted">
-              {mode === 'nfc'
-                ? 'Acerca el móvil al tag NFC de una caja u objeto'
-                : 'Apunta la cámara al código QR de un objeto o caja'}
-            </p>
+            <p className="text-xs text-ink-muted">Apunta la cámara al código QR de un objeto o caja</p>
+          </div>
+        )}
+        {!isActive && !result && mode === 'nfc' && nfcSupported && (
+          <div className="text-center space-y-1">
+            <p className="text-xs text-ink-muted">Acerca el móvil al tag NFC de una caja u objeto</p>
           </div>
         )}
       </div>
@@ -240,6 +238,31 @@ export function ScanView() {
 }
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
+
+function NFCInstructionsArea() {
+  return (
+    <div className="flex flex-col items-center gap-6 w-full max-w-xs text-center">
+      <div className="h-32 w-32 rounded-full bg-surface-card border-2 border-surface-border flex items-center justify-center">
+        <Nfc size={48} className="text-ink-faint" />
+      </div>
+      <div className="space-y-3 w-full">
+        <p className="text-sm font-medium text-ink">NFC no disponible en este dispositivo</p>
+        <p className="text-xs text-ink-muted">
+          Web NFC solo funciona en Chrome para Android.
+          Usa <span className="font-medium text-ink">NFC Tools</span> para programar los tags manualmente.
+        </p>
+        <div className="text-left bg-surface-card border border-surface-border rounded-xl p-4 space-y-1.5 text-xs text-ink-muted">
+          <p className="font-medium text-ink mb-2">Cómo programar un tag con NFC Tools:</p>
+          <p>1. Abre la caja que quieres etiquetar en la app</p>
+          <p>2. Copia la <span className="font-medium text-ink">URL NFC</span> que aparece en los datos de la caja</p>
+          <p>3. En NFC Tools → <span className="font-medium text-ink">Write</span> → <span className="font-medium text-ink">Add a record</span> → URL</p>
+          <p>4. Pega la URL y pulsa <span className="font-medium text-ink">Write / OK</span></p>
+          <p>5. Al escanear el tag, la app abre directamente esa caja</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function NFCScanArea({
   isReading, onStart, onStop, error,

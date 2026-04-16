@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard'
 import { BoxView } from './pages/BoxView'
@@ -25,26 +25,39 @@ function ThemeProvider() {
 }
 
 // Auto-pull al arrancar si hay sync configurado
+// IMPORTANTE: esperar a que Zustand termine de rehidratar desde IndexedDB antes de
+// comprobar items.length, porque IDB es async y el estado inicial siempre empieza vacío.
 function SyncOnMount() {
   const pullFromCloud = useStore((s) => s.pullFromCloud)
   const syncEnabled  = useStore((s) => s.settings.sync?.enabled)
-  const items        = useStore((s) => s.items)
   const importData   = useStore((s) => s.importData)
 
+  // Zustand persist expone hasHydrated/onFinishHydration en el objeto del store
+  const [hydrated, setHydrated] = useState(
+    () => (useStore as any).persist?.hasHydrated?.() ?? false
+  )
+
   useEffect(() => {
+    if (hydrated) return
+    const unsub = (useStore as any).persist?.onFinishHydration?.(() => setHydrated(true))
+    return unsub
+  }, [hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
     if (syncEnabled) {
       pullFromCloud(true)
       return
     }
-    // Si no hay sync y no hay datos, cargar seed.json del repo
-    if (items.length === 0) {
+    // Leer items directamente del store (estado ya hidratado, no la snapshot del render)
+    if (useStore.getState().items.length === 0) {
       fetch('/boxshell/data/seed.json')
         .then((r) => r.ok ? r.json() : null)
         .then((data) => { if (data?.items?.length) importData(data, true) })
         .catch(() => {})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [hydrated])
 
   return null
 }

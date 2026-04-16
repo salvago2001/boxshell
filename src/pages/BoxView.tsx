@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Package, MapPin, Nfc, Plus } from 'lucide-react';
+import { Edit2, Trash2, Package, MapPin, Nfc, Plus, Copy, Check } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -19,6 +19,7 @@ export function BoxView() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [copied, setCopied] = useState<'id' | 'url' | null>(null);
 
   const box = getBox(id!);
   const items = getBoxItems(id!);
@@ -57,6 +58,18 @@ export function BoxView() {
   const handleAddItem = (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => {
     addItem({ ...data, boxId: box.id });
     addToast('Objeto añadido', 'success');
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const base = (import.meta as any).env?.BASE_URL ?? '/';
+  const nfcUrl = `${window.location.origin}${base}?id=${box.id}`;
+
+  const handleCopy = (field: 'id' | 'url') => {
+    const text = field === 'id' ? box.id : nfcUrl;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(field);
+      setTimeout(() => setCopied(null), 2000);
+    });
   };
 
   const stockCount = items.filter((i) => i.status === 'stock').length;
@@ -119,6 +132,31 @@ export function BoxView() {
             <span className="text-ink-muted">{items.length} objetos</span>
             {stockCount > 0 && <span className="text-blue-400">{stockCount} en stock</span>}
             {soldCount > 0 && <span className="text-emerald-400">{soldCount} vendidos</span>}
+          </div>
+
+          {/* UUID y URL para programar tag NFC */}
+          <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wide text-ink-faint font-medium mb-2">Tag NFC</p>
+            <button
+              onClick={() => handleCopy('id')}
+              className="w-full flex items-center justify-between gap-2 text-xs font-mono text-ink-muted hover:text-ink px-2 py-1.5 bg-black/10 rounded-lg transition-colors text-left"
+              title="Copiar UUID"
+            >
+              <span className="truncate">{box.id}</span>
+              {copied === 'id'
+                ? <Check size={12} className="shrink-0 text-emerald-400" />
+                : <Copy size={12} className="shrink-0 opacity-50" />}
+            </button>
+            <button
+              onClick={() => handleCopy('url')}
+              className="w-full flex items-center justify-between gap-2 text-xs font-mono text-ink-muted hover:text-ink px-2 py-1.5 bg-black/10 rounded-lg transition-colors text-left"
+              title="Copiar URL para NFC Tools"
+            >
+              <span className="truncate">{nfcUrl}</span>
+              {copied === 'url'
+                ? <Check size={12} className="shrink-0 text-emerald-400" />
+                : <Copy size={12} className="shrink-0 opacity-50" />}
+            </button>
           </div>
         </div>
 
