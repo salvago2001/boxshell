@@ -28,10 +28,20 @@ function ThemeProvider() {
 function SyncOnMount() {
   const pullFromCloud = useStore((s) => s.pullFromCloud)
   const syncEnabled  = useStore((s) => s.settings.sync?.enabled)
+  const items        = useStore((s) => s.items)
+  const importData   = useStore((s) => s.importData)
 
   useEffect(() => {
     if (syncEnabled) {
-      pullFromCloud(true) // silencioso — sin toast de error si la nube está vacía
+      pullFromCloud(true)
+      return
+    }
+    // Si no hay sync y no hay datos, cargar seed.json del repo
+    if (items.length === 0) {
+      fetch('/boxshell/data/seed.json')
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => { if (data?.items?.length) importData(data, true) })
+        .catch(() => {})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
