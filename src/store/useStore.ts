@@ -271,6 +271,13 @@ export const useStore = create<StoreState>()(
 
         // 2. Subir fotos a Supabase Storage
         const photosMap = await loadAllPhotos();
+        // Fallback: recoger fotos de items en memoria que aún no se hayan persistido
+        // en IDB (race condition tras importData → saveAllPhotos fire-and-forget)
+        for (const item of items) {
+          if (item.photos?.length > 0 && !photosMap[item.id]?.length) {
+            photosMap[item.id] = item.photos;
+          }
+        }
         const totalItems = Object.keys(photosMap).length;
         if (totalItems > 0) {
           addToast('Subiendo fotos a la nube...', 'info');
