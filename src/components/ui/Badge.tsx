@@ -53,7 +53,7 @@ interface TagBadgeProps {
 
 export function TagBadge({ tag, onRemove }: TagBadgeProps) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-surface-elevated border border-surface-border px-2 py-0.5 text-xs text-ink-muted">
+    <span className="inline-flex items-center gap-1 rounded-md bg-surface-elevated border border-surface-border px-2 py-0.5 text-xs text-ink-muted max-w-full break-words">
       {tag}
       {onRemove && (
         <button

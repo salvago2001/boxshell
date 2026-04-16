@@ -108,7 +108,7 @@ export function ItemForm({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
-      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="p-6 space-y-5 min-w-0">
 
         {/* Nombre */}
         <Field label="Nombre *" error={errors.name}>
@@ -235,7 +235,7 @@ export function ItemForm({
               <Button type="button" variant="secondary" size="md" onClick={handleAddTag} icon={<Plus size={14} />} />
             </div>
             {form.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 min-w-0 overflow-hidden">
                 {form.tags.map((tag) => (
                   <TagBadge key={tag} tag={tag} onRemove={() => set('tags', form.tags.filter((t) => t !== tag))} />
                 ))}
