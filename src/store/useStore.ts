@@ -283,16 +283,31 @@ export const useStore = create<StoreState>()(
           addToast('Subiendo fotos a la nube...', 'info');
           const photoResult = await pushPhotosToStorage(
             sync.supabaseUrl, sync.supabaseAnonKey, sync.userKey, photosMap,
-            (done, total) => { if (done === total) addToast(`${total} fotos subidas ✓`, 'success'); },
           );
           if (photoResult.ok) {
-            // Guardar URLs en IDB y en memoria (reemplaza base64)
+            // Solo guardar/reemplazar si TODOS los uploads fueron exitosos.
+            // Si fallaron algunos (RLS, cuota…), el urlMap ya contiene el base64
+            // original en las posiciones fallidas, así que podemos seguir
+            // guardándolo para refrescar IDB — pero avisamos al usuario.
             await saveAllPhotos(photoResult.urlMap);
             itemsWithPhotos = items.map(i => ({
               ...i,
               photos: photoResult.urlMap[i.id] ?? i.photos,
             }));
             set({ items: itemsWithPhotos });
+
+            if (photoResult.failed > 0) {
+              const msg = `⚠️ ${photoResult.failed}/${photoResult.total} fotos no se subieron`
+                + (photoResult.firstError?.toLowerCase().includes('row-level security')
+                    ? ' (bucket "photos" sin política RLS para anon — mira supabase-schema.sql)'
+                    : photoResult.firstError ? `: ${photoResult.firstError}` : '');
+              addToast(msg, 'error');
+              console.error('[Store] pushToCloud:', msg);
+            } else if (photoResult.total > 0) {
+              addToast(`${photoResult.total} fotos subidas ✓`, 'success');
+            }
+          } else {
+            addToast(`Error subiendo fotos: ${photoResult.error}`, 'error');
           }
         } else if (Object.keys(photosMap).length > 0) {
           // Fotos ya son URLs → inyectarlas en items para el push

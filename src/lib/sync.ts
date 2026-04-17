@@ -43,9 +43,31 @@ export function isStorageUrl(photo: string): boolean {
 }
 
 /**
- * Sube las fotos base64 a Supabase Storage y devuelve un mapa
- * { itemId → string[] } donde cada string es una URL pública de Storage.
- * Las fotos que ya son URLs de Storage se omiten (ya están subidas).
+ * Resultado de pushPhotosToStorage.
+ *  - `urlMap`: para cada itemId, el array de fotos en el mismo orden que el original.
+ *    Cada posición contiene la URL pública si la subida fue exitosa, o el base64
+ *    original si falló. Esto evita que un upload fallido (p.ej. RLS bloqueando
+ *    al anon key) destruya la foto base64 local.
+ *  - `failed`: nº de uploads que fallaron. Si > 0, el caller debe avisar.
+ *  - `total`: nº total de uploads intentados.
+ */
+export interface PhotoUploadSummary {
+  ok: true;
+  urlMap: Record<string, string[]>;
+  failed: number;
+  total: number;
+  firstError?: string;
+}
+
+/**
+ * Sube las fotos base64 a Supabase Storage.
+ *
+ * IMPORTANTE: si un upload falla (p.ej. porque el bucket `photos` tiene RLS
+ * activa y el anon key no tiene política de INSERT), esa posición del urlMap
+ * conserva el base64 original, NUNCA una URL fantasma. De lo contrario, al
+ * guardar el urlMap en IDB se perderían las fotos locales.
+ *
+ * Las fotos que ya son URLs de Storage se mantienen sin tocar.
  */
 export async function pushPhotosToStorage(
   supabaseUrl: string,
@@ -53,13 +75,14 @@ export async function pushPhotosToStorage(
   userKey: string,
   photosMap: Record<string, string[]>,
   onProgress?: (done: number, total: number) => void,
-): Promise<{ ok: true; urlMap: Record<string, string[]> } | { ok: false; error: string }> {
+): Promise<PhotoUploadSummary | { ok: false; error: string }> {
   try {
     const client = getSupabaseClient(supabaseUrl, anonKey);
     const normalizedKey = userKey.trim().toLowerCase();
     const publicBase = `${supabaseUrl}/storage/v1/object/public/${PHOTOS_BUCKET}`;
 
-    // Preparar tareas: solo fotos base64 (las URLs ya están subidas)
+    // Preparar tareas: solo fotos base64 (las URLs ya están subidas).
+    // Indexamos qué fotos subieron bien para no reemplazar con URLs fantasma.
     const tasks: Array<{ itemId: string; index: number; dataUrl: string }> = [];
     for (const [itemId, photos] of Object.entries(photosMap)) {
       for (let i = 0; i < photos.length; i++) {
@@ -68,6 +91,11 @@ export async function pushPhotosToStorage(
         }
       }
     }
+
+    // `uploaded[itemId][index] = true` solo si el upload tuvo éxito.
+    const uploaded: Record<string, Record<number, boolean>> = {};
+    let failed = 0;
+    let firstError: string | undefined;
 
     let done = 0;
     onProgress?.(0, tasks.length);
@@ -80,22 +108,34 @@ export async function pushPhotosToStorage(
         const { error } = await client.storage
           .from(PHOTOS_BUCKET)
           .upload(path, blob, { upsert: true, contentType });
-        if (error) console.warn(`[BoxSell] Error subiendo foto ${path}:`, error.message);
+        if (error) {
+          failed++;
+          if (!firstError) firstError = error.message;
+          console.warn(`[BoxSell] Error subiendo foto ${path}:`, error.message);
+        } else {
+          (uploaded[itemId] ??= {})[index] = true;
+        }
         onProgress?.(++done, tasks.length);
       }));
     }
 
-    // Construir el mapa de URLs públicas para TODOS los items del photosMap
+    // Construir el mapa para TODOS los items del photosMap.
+    // Regla: URL pública SOLO si el upload fue OK o si ya era URL.
+    // En cualquier otro caso, devolver el base64 original intacto.
     const urlMap: Record<string, string[]> = {};
     for (const [itemId, photos] of Object.entries(photosMap)) {
       urlMap[itemId] = photos.map((photo, index) => {
         if (!photo) return '';
         if (isStorageUrl(photo)) return photo; // ya era URL
-        return `${publicBase}/${normalizedKey}/${itemId}/${index}`;
+        if (uploaded[itemId]?.[index]) {
+          return `${publicBase}/${normalizedKey}/${itemId}/${index}`;
+        }
+        // Upload falló → conservar base64 para no perder la foto localmente
+        return photo;
       }).filter(Boolean);
     }
 
-    return { ok: true, urlMap };
+    return { ok: true, urlMap, failed, total: tasks.length, firstError };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }

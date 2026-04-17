@@ -4,19 +4,10 @@ import './index.css'
 import App from './App'
 import { boxshellDiag } from './lib/idb-storage'
 
-// Registrar el service worker para funcionalidad offline
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((reg) => {
-        console.log('[BoxSell] Service worker registrado:', reg.scope)
-      })
-      .catch((err) => {
-        console.warn('[BoxSell] Error al registrar service worker:', err)
-      })
-  })
-}
+// El registro del service worker lo inyecta VitePWA automáticamente
+// (injectRegister: 'auto' en vite.config.ts) con la ruta correcta
+// bajo el base `/boxshell/`. No lo registramos manualmente para evitar
+// un doble registro y un 404 en `/sw.js`.
 
 // ─── Diagnóstico: helper global + alerta visible si IDB falla ────────────────
 declare global {
