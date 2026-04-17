@@ -37,21 +37,46 @@ function openDB(): Promise<IDBDatabase> {
 // ─── keyval (Zustand persist) ─────────────────────────────────────────────────
 
 async function idbGet(key: string): Promise<string | null> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(key);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror   = () => reject(req.error);
-  });
+  try {
+    const db = await openDB();
+    const result = await new Promise<string | null>((resolve, reject) => {
+      const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(key);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror   = () => reject(req.error);
+    });
+    const size = result ? new Blob([result]).size : 0;
+    console.info(`[IDB] GET ${key} → ${result === null ? 'null' : `${size} bytes`}`);
+    return result;
+  } catch (err) {
+    console.error(`[IDB] GET ${key} FAILED:`, err);
+    throw err;
+  }
 }
 
 async function idbSet(key: string, value: string): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(value, key);
-    req.onsuccess = () => resolve();
-    req.onerror   = () => reject(req.error);
-  });
+  const size = new Blob([value]).size;
+  try {
+    const db = await openDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const req = tx.objectStore(STORE_NAME).put(value, key);
+      req.onsuccess = () => {};
+      req.onerror   = () => reject(req.error);
+      tx.oncomplete = () => resolve();
+      tx.onerror    = () => reject(tx.error);
+      tx.onabort    = () => reject(tx.error ?? new Error('IDB transaction aborted'));
+    });
+    console.info(`[IDB] SET ${key} ← ${size} bytes ✓`);
+  } catch (err) {
+    console.error(`[IDB] SET ${key} (${size} bytes) FAILED:`, err);
+    // Fallo silencioso es la causa raíz del bug de persistencia → hacerlo ruidoso
+    try {
+      const msg = `⚠️ Error guardando datos en IndexedDB (${size} bytes): ${err instanceof Error ? err.message : String(err)}`;
+      // eslint-disable-next-line no-alert
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('boxshell:idb-error', { detail: msg }));
+    } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 async function idbDel(key: string): Promise<void> {
@@ -137,18 +162,76 @@ export const idbStorage = {
       try {
         const lsValue = localStorage.getItem(name);
         if (lsValue !== null) {
+          const lsSize = new Blob([lsValue]).size;
+          console.warn(`[IDB] Migrando ${lsSize} bytes de localStorage → IDB para key '${name}'`);
           await idbSet(name, lsValue);
           localStorage.removeItem(name);
           value = lsValue;
           console.info('[BoxSell] Datos migrados de localStorage → IndexedDB ✓');
         }
-      } catch { /* localStorage no disponible en algunos contextos */ }
+      } catch (err) {
+        console.error('[IDB] Fallo en migración localStorage→IDB:', err);
+      }
     }
     return value;
   },
   setItem: idbSet,
   removeItem: idbDel,
 };
+
+/** Diagnóstico: estado de IDB + SW + cuota. Expuesto en window.__boxshellDiag. */
+export async function boxshellDiag(): Promise<Record<string, unknown>> {
+  const result: Record<string, unknown> = {};
+  // 1. Valor de 'boxsell-storage' en IDB
+  try {
+    const raw = await idbGet('boxsell-storage');
+    if (raw) {
+      const size = new Blob([raw]).size;
+      const parsed = JSON.parse(raw) as { state?: { boxes?: unknown[]; items?: unknown[] } };
+      result.idbState = {
+        sizeBytes: size,
+        boxes: parsed.state?.boxes?.length ?? 'n/a',
+        items: parsed.state?.items?.length ?? 'n/a',
+      };
+    } else {
+      result.idbState = 'VACÍO (null) — éste es el bug si esperabas datos';
+    }
+  } catch (err) { result.idbState = `ERROR: ${String(err)}`; }
+  // 2. Fotos en IDB
+  try {
+    const photos = await loadAllPhotos();
+    const counts = Object.fromEntries(
+      Object.entries(photos).slice(0, 5).map(([k, v]) => [k.slice(0, 8), v.length])
+    );
+    result.idbPhotos = { itemsWithPhotos: Object.keys(photos).length, sample: counts };
+  } catch (err) { result.idbPhotos = `ERROR: ${String(err)}`; }
+  // 3. localStorage (por si quedó algo de la versión anterior)
+  try {
+    const ls = localStorage.getItem('boxsell-storage');
+    result.localStorage = ls ? `${new Blob([ls]).size} bytes (sobrante, debería migrarse)` : 'vacío ✓';
+  } catch { result.localStorage = 'no disponible'; }
+  // 4. Cuota del navegador
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (est) {
+      result.storageQuota = {
+        usadoMB: ((est.usage ?? 0) / 1024 / 1024).toFixed(2),
+        cuotaMB: ((est.quota ?? 0) / 1024 / 1024).toFixed(0),
+        porcentaje: est.quota ? `${(((est.usage ?? 0) / est.quota) * 100).toFixed(1)}%` : 'n/a',
+      };
+    }
+  } catch { /* ignore */ }
+  // 5. Service Workers
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.();
+    result.serviceWorkers = regs?.map((r) => ({
+      scope: r.scope,
+      active: r.active?.scriptURL,
+      waiting: r.waiting?.scriptURL ?? null,
+    }));
+  } catch { /* ignore */ }
+  return result;
+}
 
 // ─── Tamaño ───────────────────────────────────────────────────────────────────
 

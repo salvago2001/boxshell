@@ -231,18 +231,21 @@ export const useStore = create<StoreState>()(
       // ─── Import / Export / Clear ──────────────────────────────────────────────
 
       importData: (data, replace = false) => {
+        console.info(`[Store] importData: replace=${replace}, boxes=${data.boxes.length}, items=${data.items.length}`);
         // Guardar fotos en IDB en background (fire-and-forget, no bloquea la UI)
         const photosMap: Record<string, string[]> = {};
         for (const item of data.items) {
           if (item.photos?.length > 0) photosMap[item.id] = item.photos;
         }
         if (Object.keys(photosMap).length > 0) {
-          saveAllPhotos(photosMap).catch(console.error);
+          console.info(`[Store] importData: ${Object.keys(photosMap).length} items tienen fotos → saveAllPhotos`);
+          saveAllPhotos(photosMap).catch((err) => console.error('[Store] saveAllPhotos error:', err));
         }
         set((state) => ({
           boxes: replace ? data.boxes : [...state.boxes, ...data.boxes],
           items: replace ? data.items : [...state.items, ...data.items],
         }));
+        console.info(`[Store] importData DONE → estado ahora: boxes=${get().boxes.length}, items=${get().items.length}`);
       },
 
       clearAllData: () => {
@@ -257,6 +260,7 @@ export const useStore = create<StoreState>()(
       },
 
       pushToCloud: async () => {
+        console.info(`[Store] pushToCloud: INICIO con boxes=${get().boxes.length}, items=${get().items.length}`);
         const { boxes, items, settings, addToast } = get();
         const sync = settings.sync;
         if (!sync?.enabled || !sync.supabaseUrl || !sync.supabaseAnonKey || !sync.userKey) {
@@ -315,6 +319,7 @@ export const useStore = create<StoreState>()(
           },
         }));
         addToast('Datos sincronizados en la nube ✓', 'success');
+        console.info(`[Store] pushToCloud: FIN OK — estado final boxes=${get().boxes.length}, items=${get().items.length}`);
         return result;
       },
 
@@ -377,16 +382,26 @@ export const useStore = create<StoreState>()(
       }),
       // Al hidratar: restaurar fotos desde IDB photos store al estado en memoria
       onRehydrateStorage: () => async (state) => {
-        if (!state || !_storeSet) return;
-        const photosMap = await loadAllPhotos();
-        if (Object.keys(photosMap).length > 0) {
-          const currentItems = _storeGet?.().items ?? state.items;
-          _storeSet({
-            items: currentItems.map((item) => ({
-              ...item,
-              photos: photosMap[item.id] ?? item.photos,
-            })),
-          });
+        console.info(`[Store] onRehydrateStorage: state recibido con boxes=${state?.boxes?.length ?? 'null'}, items=${state?.items?.length ?? 'null'}`);
+        if (!state || !_storeSet) {
+          console.warn('[Store] onRehydrateStorage: state o _storeSet nulo → no se restauran fotos');
+          return;
+        }
+        try {
+          const photosMap = await loadAllPhotos();
+          console.info(`[Store] onRehydrateStorage: fotos en IDB para ${Object.keys(photosMap).length} items`);
+          if (Object.keys(photosMap).length > 0) {
+            const currentItems = _storeGet?.().items ?? state.items;
+            _storeSet({
+              items: currentItems.map((item) => ({
+                ...item,
+                photos: photosMap[item.id] ?? item.photos,
+              })),
+            });
+          }
+          console.info(`[Store] onRehydrateStorage DONE → estado final: boxes=${_storeGet?.().boxes.length}, items=${_storeGet?.().items.length}`);
+        } catch (err) {
+          console.error('[Store] onRehydrateStorage ERROR:', err);
         }
       },
     }
