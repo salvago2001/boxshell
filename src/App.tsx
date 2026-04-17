@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard'
 import { BoxView } from './pages/BoxView'
@@ -44,19 +44,36 @@ function ThemeProvider() {
 }
 
 // ─── Primera carga: crea 18 cajas si no hay ninguna ──────────────────────────
-// localStorage es síncrono → el store ya está hidratado en el primer render.
+// IDB es async → hay que esperar onFinishHydration antes de comprobar boxes.length,
+// porque en el primer render el store siempre arranca vacío y sin espera crearía
+// 18 cajas duplicadas encima de los datos ya guardados.
 // Supabase NUNCA se toca automáticamente; solo con botones manuales en Ajustes.
 function InitOnMount() {
-  const boxes      = useStore((s) => s.boxes)
   const importData = useStore((s) => s.importData)
 
+  // Zustand persist expone hasHydrated / onFinishHydration en el objeto del store
+  const [hydrated, setHydrated] = useState(
+    () => (useStore as unknown as { persist?: { hasHydrated?: () => boolean } })
+      .persist?.hasHydrated?.() ?? false
+  )
+
+  // Suscribirse a la hidratación si aún no ha ocurrido
   useEffect(() => {
-    if (boxes.length === 0) {
+    if (hydrated) return
+    const unsub = (useStore as unknown as { persist?: { onFinishHydration?: (cb: () => void) => () => void } })
+      .persist?.onFinishHydration?.(() => setHydrated(true))
+    return unsub
+  }, [hydrated])
+
+  // Solo actuar cuando IDB ya está cargado
+  useEffect(() => {
+    if (!hydrated) return
+    // Leer el estado actual del store (no la snapshot del render)
+    if (useStore.getState().boxes.length === 0) {
       importData({ boxes: createDefaultBoxes(), items: [] }, false)
     }
-  // Solo al montar
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [hydrated])
 
   return null
 }

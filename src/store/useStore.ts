@@ -367,8 +367,8 @@ export const useStore = create<StoreState>()(
   },
     {
       name: 'boxsell-storage',
-      // localStorage: síncrono, sobrevive cualquier refresco sin esperar a IDB
-      storage: createJSONStorage(() => localStorage),
+      // IDB: sin límite de 5 MB, aguanta miles de items sin problema
+      storage: createJSONStorage(() => idbStorage),
       // Fotos excluidas del estado serializado → se guardan en IDB photos store aparte
       partialize: (state) => ({
         boxes: state.boxes,
