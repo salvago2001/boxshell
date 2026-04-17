@@ -11,6 +11,28 @@ import { AppHeader } from '../components/ui/AppHeader';
 import type { Box, Item } from '../types';
 import { useNavigate as useNav } from 'react-router-dom';
 
+const NFC_BASE_URL = 'https://salvago2001.github.io/boxshell/';
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handle = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+  return (
+    <button
+      onClick={handle}
+      className="flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-lg border border-white/10 text-ink-muted hover:text-ink hover:border-brand/40 transition-all"
+      aria-label="Copiar URL NFC"
+    >
+      {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+      {copied ? 'Copiado' : 'Copiar'}
+    </button>
+  );
+}
+
 export function BoxView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -105,14 +127,14 @@ export function BoxView() {
       <div className="max-w-lg mx-auto px-4 py-5 space-y-6">
         {/* Info de la caja */}
         <div
-          className="rounded-xl border p-5"
+          className="rounded-xl border p-5 space-y-3"
           style={{
             backgroundColor: `${box.color}08`,
             borderColor: `${box.color}30`,
           }}
         >
           {box.description && (
-            <p className="text-sm text-ink-muted mb-3">{box.description}</p>
+            <p className="text-sm text-ink-muted">{box.description}</p>
           )}
           <div className="flex flex-wrap gap-4 text-xs font-mono text-ink-muted">
             {box.location && (
@@ -128,7 +150,27 @@ export function BoxView() {
               </span>
             )}
           </div>
-          <div className="flex gap-4 mt-3 pt-3 border-t border-white/5 text-xs font-mono">
+
+          {/* Sección Tag NFC — visible si la caja tiene número asignado */}
+          {box.number != null && (
+            <div className="pt-3 border-t border-white/10 space-y-2">
+              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider flex items-center gap-1.5">
+                <Nfc size={11} />
+                Tag NFC
+              </p>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-mono text-ink font-medium">{box.name}</p>
+                  <p className="text-xs font-mono text-ink-muted truncate">
+                    {NFC_BASE_URL}?box={box.number}
+                  </p>
+                </div>
+                <CopyButton text={`${NFC_BASE_URL}?box=${box.number}`} />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-3 border-t border-white/5 text-xs font-mono">
             <span className="text-ink-muted">{items.length} objetos</span>
             {stockCount > 0 && <span className="text-blue-400">{stockCount} en stock</span>}
             {soldCount > 0 && <span className="text-emerald-400">{soldCount} vendidos</span>}

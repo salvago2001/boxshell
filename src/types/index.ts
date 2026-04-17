@@ -4,6 +4,7 @@ export type ItemStatus = 'draft' | 'stock' | 'reserved' | 'sold';
 
 export interface Box {
   id: string;           // UUID generado en app
+  number?: number;      // número de caja (1-18 para cajas por defecto, para URL NFC ?box=N)
   nfcUid: string;       // UID del tag NFC grabado en la caja
   name: string;         // "Caja A", "Electrónica 1", etc.
   description: string;

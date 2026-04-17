@@ -367,7 +367,8 @@ export const useStore = create<StoreState>()(
   },
     {
       name: 'boxsell-storage',
-      storage: createJSONStorage(() => idbStorage),
+      // localStorage: síncrono, sobrevive cualquier refresco sin esperar a IDB
+      storage: createJSONStorage(() => localStorage),
       // Fotos excluidas del estado serializado → se guardan en IDB photos store aparte
       partialize: (state) => ({
         boxes: state.boxes,
@@ -377,34 +378,12 @@ export const useStore = create<StoreState>()(
       // Al hidratar: restaurar fotos desde IDB photos store al estado en memoria
       onRehydrateStorage: () => async (state) => {
         if (!state || !_storeSet) return;
-
         const photosMap = await loadAllPhotos();
-
-        // Caso migración desde localStorage: items tienen fotos embebidas pero IDB photos store está vacío
-        const hasEmbeddedPhotos = state.items.some((i) => (i.photos?.length ?? 0) > 0);
-        if (hasEmbeddedPhotos && Object.keys(photosMap).length === 0) {
-          const migrationMap: Record<string, string[]> = {};
-          for (const item of state.items) {
-            if (item.photos?.length > 0) migrationMap[item.id] = item.photos;
-          }
-          await saveAllPhotos(migrationMap).catch(console.error);
-          // Forzar re-persist sin fotos en keyval (partialize las eliminará)
-          _storeSet({ items: [...state.items] });
-          console.info('[BoxSell] Fotos migradas a IDB photos store ✓');
-          return;
-        }
-
-        // Caso normal: inyectar fotos desde IDB photos store al estado en memoria.
-        // Usamos el estado ACTUAL del store (no el capturado en la hidratación) para evitar
-        // la race condition con pullFromCloud: si pull ya corrió y puso URLs en los items,
-        // _storeGet nos da esos items actualizados; si no, _storeGet devuelve los hidratados.
         if (Object.keys(photosMap).length > 0) {
           const currentItems = _storeGet?.().items ?? state.items;
           _storeSet({
             items: currentItems.map((item) => ({
               ...item,
-              // photosMap[item.id] → fotos de IDB; si no hay entrada, conservar las que ya
-              // tiene el item en memoria (puede ser una URL de Storage puesta por pullFromCloud)
               photos: photosMap[item.id] ?? item.photos,
             })),
           });
