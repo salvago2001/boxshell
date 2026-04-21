@@ -15,16 +15,27 @@ const DEFAULT_COLORS = [
   '#FF6B2B', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899',
 ]
 
-function createDefaultBoxes(): Box[] {
+// UUIDs FIJOS v4-compatibles para las 18 cajas por defecto.
+// Son determinísticos: si el usuario hace clearAllData o importa un JSON
+// que borra las cajas, al recrearlas automáticamente tendrán EXACTAMENTE
+// los mismos UUIDs, así los items exportados antes siguen enlazando bien
+// con su caja. Con UUIDs aleatorios el `importData(replace=true)` dejaba
+// los items huérfanos y parecían "borrados" tras un refresh.
+export const DEFAULT_BOX_IDS = Array.from({ length: 18 }, (_, i) =>
+  `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`
+)
+
+export function createDefaultBoxes(): Box[] {
+  const createdAt = new Date().toISOString()
   return Array.from({ length: 18 }, (_, i) => ({
-    id: crypto.randomUUID(),
+    id: DEFAULT_BOX_IDS[i],
     number: i + 1,
     nfcUid: '',
     name: `Caja ${i + 1}`,
     description: '',
     location: '',
     color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
-    createdAt: new Date().toISOString(),
+    createdAt,
   }))
 }
 

@@ -241,10 +241,38 @@ export const useStore = create<StoreState>()(
           console.info(`[Store] importData: ${Object.keys(photosMap).length} items tienen fotos → saveAllPhotos`);
           saveAllPhotos(photosMap).catch((err) => console.error('[Store] saveAllPhotos error:', err));
         }
-        set((state) => ({
-          boxes: replace ? data.boxes : [...state.boxes, ...data.boxes],
-          items: replace ? data.items : [...state.items, ...data.items],
-        }));
+        set((state) => {
+          // Reglas de mezcla:
+          //   · replace=true  y el JSON TRAE boxes → reemplazar boxes (caso "import total").
+          //   · replace=true  y el JSON NO trae boxes → MANTENER las actuales
+          //     (si las borráramos, todos los items quedarían huérfanos).
+          //   · replace=false → concatenar (antiguo comportamiento de merge).
+          const nextBoxes =
+            replace
+              ? (data.boxes.length > 0 ? data.boxes : state.boxes)
+              : [...state.boxes, ...data.boxes];
+          const baseItems = replace ? data.items : [...state.items, ...data.items];
+
+          // Reasignar items con boxId inexistente a una caja fallback, para
+          // que no desaparezcan de la UI tras un refresh. Preferimos Caja 1.
+          const validIds = new Set(nextBoxes.map((b) => b.id));
+          const fallback = nextBoxes.find((b) => b.number === 1) ?? nextBoxes[0];
+          let orphans = 0;
+          const nextItems = fallback
+            ? baseItems.map((i) => {
+                if (!validIds.has(i.boxId)) {
+                  orphans++;
+                  return { ...i, boxId: fallback.id };
+                }
+                return i;
+              })
+            : baseItems;
+          if (orphans > 0) {
+            console.warn(`[Store] importData: ${orphans} items huérfanos reasignados a "${fallback?.name}"`);
+          }
+
+          return { boxes: nextBoxes, items: nextItems };
+        });
         console.info(`[Store] importData DONE → estado ahora: boxes=${get().boxes.length}, items=${get().items.length}`);
       },
 
@@ -396,6 +424,9 @@ export const useStore = create<StoreState>()(
         settings: state.settings,
       }),
       // Al hidratar: restaurar fotos desde IDB photos store al estado en memoria
+      // y auto-curar items huérfanos (boxId que ya no existe). Esto es clave
+      // cuando el usuario tenía datos guardados con UUIDs aleatorios de cajas
+      // que fueron reemplazadas por las cajas por defecto con UUIDs fijos.
       onRehydrateStorage: () => async (state) => {
         console.info(`[Store] onRehydrateStorage: state recibido con boxes=${state?.boxes?.length ?? 'null'}, items=${state?.items?.length ?? 'null'}`);
         if (!state || !_storeSet) {
@@ -405,15 +436,24 @@ export const useStore = create<StoreState>()(
         try {
           const photosMap = await loadAllPhotos();
           console.info(`[Store] onRehydrateStorage: fotos en IDB para ${Object.keys(photosMap).length} items`);
-          if (Object.keys(photosMap).length > 0) {
-            const currentItems = _storeGet?.().items ?? state.items;
-            _storeSet({
-              items: currentItems.map((item) => ({
-                ...item,
-                photos: photosMap[item.id] ?? item.photos,
-              })),
-            });
+          // Reunir fotos + reasignar huérfanos en un solo set()
+          const currentItems = _storeGet?.().items ?? state.items;
+          const currentBoxes = _storeGet?.().boxes ?? state.boxes ?? [];
+          const validIds = new Set(currentBoxes.map((b) => b.id));
+          const fallback = currentBoxes.find((b) => b.number === 1) ?? currentBoxes[0];
+          let orphans = 0;
+          const patched = currentItems.map((item) => {
+            const photos = photosMap[item.id] ?? item.photos;
+            if (fallback && !validIds.has(item.boxId)) {
+              orphans++;
+              return { ...item, photos, boxId: fallback.id };
+            }
+            return { ...item, photos };
+          });
+          if (orphans > 0) {
+            console.warn(`[Store] onRehydrateStorage: ${orphans} items huérfanos reasignados a "${fallback?.name}"`);
           }
+          _storeSet({ items: patched });
           console.info(`[Store] onRehydrateStorage DONE → estado final: boxes=${_storeGet?.().boxes.length}, items=${_storeGet?.().items.length}`);
         } catch (err) {
           console.error('[Store] onRehydrateStorage ERROR:', err);
