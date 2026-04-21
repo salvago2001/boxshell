@@ -58,7 +58,11 @@ async function idbSet(key: string, value: string): Promise<void> {
   try {
     const db = await openDB();
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
+      // durability:'strict' garantiza que oncomplete no dispara hasta que los datos
+      // están físicamente en disco. Sin esto, un hard-refresh (Ctrl+Shift+R) puede
+      // leer el estado ANTERIOR porque la escritura quedó en el buffer del navegador
+      // pero no llegó a disco antes de que el proceso se recargara.
+      const tx = db.transaction(STORE_NAME, 'readwrite', { durability: 'strict' });
       const req = tx.objectStore(STORE_NAME).put(value, key);
       req.onsuccess = () => {};
       req.onerror   = () => reject(req.error);
@@ -94,9 +98,12 @@ async function idbDel(key: string): Promise<void> {
 export async function saveItemPhotos(itemId: string, photos: string[]): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const req = db.transaction(PHOTOS_STORE, 'readwrite').objectStore(PHOTOS_STORE).put(photos, itemId);
-    req.onsuccess = () => resolve();
+    const tx  = db.transaction(PHOTOS_STORE, 'readwrite', { durability: 'strict' });
+    const req = tx.objectStore(PHOTOS_STORE).put(photos, itemId);
+    req.onsuccess = () => {};
     req.onerror   = () => reject(req.error);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => reject(tx.error);
   });
 }
 
@@ -106,7 +113,7 @@ export async function saveAllPhotos(photosMap: Record<string, string[]>): Promis
   if (entries.length === 0) return;
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx    = db.transaction(PHOTOS_STORE, 'readwrite');
+    const tx    = db.transaction(PHOTOS_STORE, 'readwrite', { durability: 'strict' });
     const store = tx.objectStore(PHOTOS_STORE);
     for (const [id, photos] of entries) store.put(photos, id);
     tx.oncomplete = () => resolve();
